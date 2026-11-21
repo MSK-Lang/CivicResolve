@@ -4,7 +4,7 @@ import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { HomePage } from './pages/HomePage';
 import { ReportIssuePage } from './pages/ReportIssuePage';
-import { IssueDetailPage } from './pages/IssueDetailPage';
+import { TrackIssuePage } from './pages/TrackIssuePage';
 import { HealthCheckPage } from './pages/HealthCheckPage';
 
 export default function App() {
@@ -66,7 +66,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/report" element={<ReportIssuePage />} />
-          <Route path="/issues/:id" element={<IssueDetailPage />} />
+          <Route path="/track" element={<TrackIssuePage />} />
+          <Route path="/track/:id" element={<TrackIssuePage />} />
+          <Route path="/issues/:id" element={<TrackIssuePage />} />
           <Route path="/health" element={<HealthCheckPage />} />
         </Routes>
       </div>

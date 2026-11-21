@@ -421,6 +421,16 @@ export const PublicCivicIssueSchema = z.object({
   aiTriage: GeminiTriageResultSchema.optional(),
   triageEvaluation: TriageEvaluationSchema.optional(),
   priorityScore: PriorityScoreSchema.optional(),
+  auditHistory: z.array(z.object({
+    id: z.string(),
+    reportId: z.string().optional(),
+    eventType: ReportAuditEventTypeSchema,
+    timestamp: z.string(),
+    actor: z.object({
+      type: z.enum(['citizen', 'system', 'ai_agent', 'admin'])
+    }),
+    description: z.string()
+  })).optional(),
   createdAt: z.string(),
   updatedAt: z.string()
 });

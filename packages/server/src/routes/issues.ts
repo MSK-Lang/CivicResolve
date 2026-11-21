@@ -59,6 +59,18 @@ export function serializePublicReport(issue: CivicIssue): PublicCivicIssue {
       }
     : (issue.imageUrl ? { url: issue.imageUrl } : undefined);
 
+  // Redact all personal identifiers from audit events for public consumption
+  const publicAuditHistory = (issue.auditHistory || []).map(event => ({
+    id: event.id,
+    reportId: event.reportId,
+    eventType: event.eventType,
+    timestamp: event.timestamp,
+    actor: {
+      type: event.actor.type
+    },
+    description: event.description
+  }));
+
   return {
     id: issue.id,
     title: issue.title,
@@ -72,6 +84,7 @@ export function serializePublicReport(issue: CivicIssue): PublicCivicIssue {
     aiTriage: issue.aiTriage,
     triageEvaluation: issue.triageEvaluation,
     priorityScore: issue.priorityScore,
+    auditHistory: publicAuditHistory,
     createdAt: issue.createdAt,
     updatedAt: issue.updatedAt
   };

@@ -347,7 +347,7 @@ export function ReportIssuePage() {
               variant="action"
               size="md"
               className="w-full sm:w-auto"
-              onClick={() => navigate(`/issues/${createdReport.id}`)}
+              onClick={() => navigate(`/track/${createdReport.id}`)}
             >
               Track Report Progress
             </Button>

@@ -9,8 +9,21 @@ export function Navbar() {
   const navLinks = [
     { name: 'Dashboard', path: '/' },
     { name: 'Report an Issue', path: '/report' },
+    { name: 'Track Report', path: '/track' },
     { name: 'System Health', path: '/health' },
   ];
+
+  const isLinkActive = (path: string) => {
+    if (path === '/') return location.pathname === '/';
+    if (path === '/track') {
+      return (
+        location.pathname === '/track' ||
+        location.pathname.startsWith('/track/') ||
+        location.pathname.startsWith('/issues/')
+      );
+    }
+    return location.pathname === path;
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full shrink-0 h-14 bg-canvas/95 backdrop-blur-sm border-b border-border">
@@ -27,7 +40,7 @@ export function Navbar() {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center gap-6" aria-label="Main Navigation">
           {navLinks.map((link) => {
-            const isActive = location.pathname === link.path;
+            const isActive = isLinkActive(link.path);
             return (
               <Link
                 key={link.path}
@@ -68,7 +81,7 @@ export function Navbar() {
           aria-label="Mobile Navigation"
         >
           {navLinks.map((link) => {
-            const isActive = location.pathname === link.path;
+            const isActive = isLinkActive(link.path);
             return (
               <Link
                 key={link.path}
