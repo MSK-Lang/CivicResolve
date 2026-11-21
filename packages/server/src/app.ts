@@ -71,7 +71,6 @@ export function buildApp(options?: { logger?: boolean }): FastifyInstance {
   });
 
   // Register API Routes
-  app.register(healthRoutes);
   app.register(issueRoutes);
 
   // Serve Single-Container SPA in Production

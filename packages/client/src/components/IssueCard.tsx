@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Link } from 'react-router-dom';
 import type { CivicIssue } from '@civicresolve/shared';
 import { MapPin, ArrowRight } from 'lucide-react';
@@ -8,7 +9,7 @@ interface IssueCardProps {
   issue: CivicIssue;
 }
 
-export function IssueCard({ issue }: IssueCardProps) {
+export const IssueCard = memo(function IssueCard({ issue }: IssueCardProps) {
   const formattedDate = new Date(issue.createdAt).toLocaleDateString('en-IN', {
     day: '2-digit',
     month: 'short',
@@ -66,4 +67,4 @@ export function IssueCard({ issue }: IssueCardProps) {
       </div>
     </article>
   );
-}
+});

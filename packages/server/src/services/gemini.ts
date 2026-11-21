@@ -20,7 +20,7 @@ import {
 // Service Constants & Error Types
 // ============================================================================
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+export const DEFAULT_GEMINI_MODEL = env.GEMINI_MODEL || 'gemini-3.8-flash';
 export const DEFAULT_GEMINI_TIMEOUT_MS = 10000;
 export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB ceiling
 export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
@@ -260,6 +260,9 @@ export async function triageComplaintWithGemini(
   let modelClient: GeminiModelClient | null = options.client || null;
 
   if (!modelClient) {
+    if (options.apiKey !== undefined && (!options.apiKey || options.apiKey.includes('placeholder'))) {
+      return buildRulesFallbackTriage(input, 'GEMINI_API_KEY is not configured');
+    }
     if (genAI) {
       modelClient = genAI as unknown as GeminiModelClient;
     } else {

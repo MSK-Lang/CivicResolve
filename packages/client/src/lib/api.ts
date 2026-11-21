@@ -1,11 +1,23 @@
-import type { CivicIssue, CreateIssueInput, HealthCheckResponse } from '@civicresolve/shared';
+import type { CivicIssue, CreateIssueInput, HealthCheckResponse, DuplicateCandidate } from '@civicresolve/shared';
 
 const API_BASE = '/api';
+const DEFAULT_TIMEOUT_MS = 10000;
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = DEFAULT_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function fetchHealth(): Promise<HealthCheckResponse> {
-  const res = await fetch('/api/health').catch(() => fetch('/healthz'));
+  const res = await fetchWithTimeout('/api/health').catch(() => fetchWithTimeout('/healthz'));
   if (!res.ok) {
-    const fallback = await fetch('/healthz');
+    const fallback = await fetchWithTimeout('/healthz');
     if (!fallback.ok) {
       throw new Error(`Health check failed with status ${fallback.status}`);
     }
@@ -15,7 +27,7 @@ export async function fetchHealth(): Promise<HealthCheckResponse> {
 }
 
 export async function fetchIssues(): Promise<CivicIssue[]> {
-  const res = await fetch(`${API_BASE}/issues`);
+  const res = await fetchWithTimeout(`${API_BASE}/issues`);
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.message || `Failed to fetch issues: ${res.statusText}`);
@@ -25,7 +37,7 @@ export async function fetchIssues(): Promise<CivicIssue[]> {
 }
 
 export async function fetchIssueById(id: string): Promise<CivicIssue> {
-  const res = await fetch(`${API_BASE}/issues/${encodeURIComponent(id)}`);
+  const res = await fetchWithTimeout(`${API_BASE}/issues/${encodeURIComponent(id)}`);
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
     throw new Error(errorData.message || 'Issue not found');
@@ -40,7 +52,7 @@ export async function createIssue(input: CreateIssueInput, idempotencyKey?: stri
     headers['Idempotency-Key'] = idempotencyKey;
   }
 
-  const res = await fetch(`${API_BASE}/issues`, {
+  const res = await fetchWithTimeout(`${API_BASE}/issues`, {
     method: 'POST',
     headers,
     body: JSON.stringify(input)
@@ -65,7 +77,7 @@ export async function fetchAdminIssues(
   if (params?.category) query.set('category', params.category);
   if (params?.status) query.set('status', params.status);
 
-  const res = await fetch(`${API_BASE}/admin/issues?${query.toString()}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/admin/issues?${query.toString()}`, {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -84,7 +96,7 @@ export async function fetchAdminIssues(
 }
 
 export async function fetchAdminIssueById(token: string, id: string): Promise<CivicIssue> {
-  const res = await fetch(`${API_BASE}/admin/issues/${encodeURIComponent(id)}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/admin/issues/${encodeURIComponent(id)}`, {
     headers: {
       Authorization: `Bearer ${token}`
     }
@@ -104,7 +116,7 @@ export async function updateAdminIssue(
   id: string,
   updates: { status?: string; urgency?: string; notes?: string }
 ): Promise<CivicIssue> {
-  const res = await fetch(`${API_BASE}/admin/issues/${encodeURIComponent(id)}`, {
+  const res = await fetchWithTimeout(`${API_BASE}/admin/issues/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -122,11 +134,11 @@ export async function updateAdminIssue(
   return json.data;
 }
 
-export async function fetchAdminClusters(token?: string): Promise<any[]> {
+export async function fetchAdminClusters(token?: string): Promise<DuplicateCandidate[]> {
   const headers: Record<string, string> = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}/admin/clusters`, { headers });
+  const res = await fetchWithTimeout(`${API_BASE}/admin/clusters`, { headers });
   if (!res.ok) {
     throw new Error(`Failed to fetch clusters: ${res.statusText}`);
   }
@@ -139,8 +151,8 @@ export async function submitClusterDecision(
   clusterId: string,
   decision: 'approved' | 'rejected',
   notes?: string
-): Promise<any> {
-  const res = await fetch(`${API_BASE}/admin/clusters/${encodeURIComponent(clusterId)}/decision`, {
+): Promise<{ success: boolean; data?: DuplicateCandidate; message?: string }> {
+  const res = await fetchWithTimeout(`${API_BASE}/admin/clusters/${encodeURIComponent(clusterId)}/decision`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

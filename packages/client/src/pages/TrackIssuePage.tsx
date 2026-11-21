@@ -86,17 +86,18 @@ export function TrackIssuePage() {
     }
   };
 
-  // Safe confidence percentage
-  const getConfidencePercentage = (): number => {
+  // Safe confidence display: Never fabricates AI confidence during fallback
+  const getConfidenceBadge = (): { text: string; isAI: boolean } => {
     const triage = issue?.triageEvaluation || issue?.aiTriage;
-    if (!triage) return 85;
-    if ('confidence' in triage && typeof triage.confidence === 'number') {
-      return Math.round(triage.confidence * 100);
+    if (!triage) return { text: 'Municipal Policy Triage', isAI: false };
+    if (triage.triageSource === 'rules_fallback') {
+      return { text: 'Deterministic Rule Evaluation', isAI: false };
     }
-    if ('confidenceScore' in triage && typeof triage.confidenceScore === 'number') {
-      return Math.round(triage.confidenceScore * 100);
+    const score = triage.aiConfidence ?? ('confidenceScore' in triage ? triage.confidenceScore : null);
+    if (typeof score === 'number' && score > 0) {
+      return { text: `${Math.round(score * 100)}% AI Confidence`, isAI: true };
     }
-    return 85;
+    return { text: 'Deterministic Policy Evaluation', isAI: false };
   };
 
   // Audit history helper to find timestamps for specific lifecycle events
@@ -344,7 +345,7 @@ export function TrackIssuePage() {
                     <span>Municipal Triage Assessment</span>
                   </div>
                   <span className="text-[11px] text-ink-muted font-mono">
-                    {getConfidencePercentage()}% Evaluated Confidence
+                    {getConfidenceBadge().text}
                   </span>
                 </div>
 

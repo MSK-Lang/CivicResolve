@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchIssues, fetchHealth } from '../lib/api';
 import type { CivicIssue, HealthCheckResponse } from '@civicresolve/shared';
@@ -15,7 +15,7 @@ export function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -30,11 +30,11 @@ export function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-8">
@@ -54,6 +54,7 @@ export function HomePage() {
             type="button"
             variant="action"
             size="md"
+            aria-label="Report a new civic issue"
             className="!bg-[#765448] !text-white hover:!bg-[#5E4238] shadow-sm font-semibold"
             onClick={() => navigate('/report')}
           >

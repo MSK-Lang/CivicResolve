@@ -451,6 +451,34 @@ export const AdminUpdateIssueSchema = z.object({
 });
 export type AdminUpdateIssue = z.infer<typeof AdminUpdateIssueSchema>;
 
+// GeoCluster Duplicate Candidate Schema
+export const DuplicateCandidateSchema = z.object({
+  id: z.string(),
+  primaryReport: z.object({
+    id: z.string(),
+    title: z.string(),
+    category: z.string(),
+    address: z.string(),
+    createdAt: z.string(),
+    status: z.string()
+  }),
+  duplicateReport: z.object({
+    id: z.string(),
+    title: z.string(),
+    category: z.string(),
+    address: z.string(),
+    createdAt: z.string(),
+    status: z.string()
+  }),
+  distanceMeters: z.number(),
+  category: z.string(),
+  status: z.enum(['pending', 'approved', 'rejected']),
+  reviewedBy: z.string().optional(),
+  reviewedAt: z.string().optional(),
+  notes: z.string().optional()
+});
+export type DuplicateCandidate = z.infer<typeof DuplicateCandidateSchema>;
+
 // ============================================================================
 // 8. Health and Generic API Schemas
 // ============================================================================

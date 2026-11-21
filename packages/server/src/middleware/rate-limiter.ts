@@ -45,6 +45,15 @@ export function createRateLimiter(options: RateLimitOptions) {
     const now = Date.now();
     const key = keyGenerator ? keyGenerator(request) : getClientIp(request);
 
+    // Clean up expired buckets if cache grows large to prevent memory leaks
+    if (rateLimitBuckets.size > 1000) {
+      for (const [k, v] of rateLimitBuckets.entries()) {
+        if (now >= v.resetAt) {
+          rateLimitBuckets.delete(k);
+        }
+      }
+    }
+
     let bucket = rateLimitBuckets.get(key);
     if (!bucket || now >= bucket.resetAt) {
       bucket = {

@@ -1,34 +1,10 @@
 import { calculateHaversineDistanceMeters } from '../utils/haversine.js';
 import { IssueRepository, getFirestore, isFirebaseReady } from './firebase.js';
-import type { CivicIssue } from '@civicresolve/shared';
+import type { CivicIssue, DuplicateCandidate } from '@civicresolve/shared';
 
 export const GEO_CLUSTER_RADIUS_METERS = 500;
 
-export interface DuplicateCandidate {
-  id: string; // cluster suggestion ID
-  primaryReport: {
-    id: string;
-    title: string;
-    category: string;
-    address: string;
-    createdAt: string;
-    status: string;
-  };
-  duplicateReport: {
-    id: string;
-    title: string;
-    category: string;
-    address: string;
-    createdAt: string;
-    status: string;
-  };
-  distanceMeters: number;
-  category: string;
-  status: 'pending' | 'approved' | 'rejected';
-  reviewedBy?: string;
-  reviewedAt?: string;
-  notes?: string;
-}
+export type { DuplicateCandidate };
 
 // In-memory cluster store fallback for development
 const inMemoryClusters = new Map<string, DuplicateCandidate>();
@@ -41,7 +17,7 @@ export async function detectGeoClusters(): Promise<DuplicateCandidate[]> {
   const existingDecisions = new Map<string, { status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reviewedAt?: string; notes?: string }>();
   if (isFirebaseReady() && getFirestore()) {
     try {
-      const snap = await getFirestore()!.collection('clusters').get();
+      const snap = await getFirestore()!.collection('clusters').limit(100).get();
       snap.docs.forEach((doc) => {
         const d = doc.data();
         existingDecisions.set(doc.id, {

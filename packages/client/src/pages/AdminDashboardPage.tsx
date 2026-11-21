@@ -10,6 +10,7 @@ import type {
   CivicIssue,
   CivicIssueStatus,
   ReportAuditEvent,
+  DuplicateCandidate,
 } from '@civicresolve/shared';
 import { Button, Input, Select, FormField, PriorityIndicator } from '../components/ui';
 import {
@@ -63,7 +64,7 @@ export function AdminDashboardPage() {
   // Data State
   const [issues, setIssues] = useState<CivicIssue[]>([]);
   const [totalCount, setTotalCount] = useState<number>(0);
-  const [clusters, setClusters] = useState<any[]>([]);
+  const [clusters, setClusters] = useState<DuplicateCandidate[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -403,7 +404,7 @@ export function AdminDashboardPage() {
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono font-medium text-accent">
-                      {cluster.primaryIssue?.category || 'Hazard'}
+                      {cluster.primaryReport?.category || cluster.category || 'Hazard'}
                     </span>
                     <span className="text-xs text-ink-muted">·</span>
                     <span className="text-xs text-ink-secondary">
@@ -411,10 +412,10 @@ export function AdminDashboardPage() {
                     </span>
                   </div>
                   <div className="text-sm text-ink-primary font-medium">
-                    Primary: &quot;{cluster.primaryIssue?.title}&quot; vs Candidate: &quot;{cluster.candidateIssue?.title}&quot;
+                    Primary: &quot;{cluster.primaryReport?.title}&quot; vs Candidate: &quot;{cluster.duplicateReport?.title}&quot;
                   </div>
                   <div className="text-xs text-ink-muted">
-                    Location: {cluster.primaryIssue?.location?.address || 'Municipal area'}
+                    Location: {cluster.primaryReport?.address || 'Municipal area'}
                   </div>
                 </div>
 
