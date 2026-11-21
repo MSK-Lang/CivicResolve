@@ -85,6 +85,10 @@ export function isGeminiReady(): boolean {
   return genAI !== null;
 }
 
+export function setGeminiClient(client: GeminiModelClient | null): void {
+  genAI = client as unknown as GoogleGenAI;
+}
+
 export function resetGeminiClient(): void {
   genAI = null;
 }
@@ -128,6 +132,13 @@ export function validateImageInput(image?: ImageMetadata): {
     return {
       valid: false,
       error: `Unsupported image MIME type: ${image.mimeType || 'unknown'}. Supported types: JPEG, PNG, WebP.`
+    };
+  }
+
+  if (image.fileSizeBytes && image.fileSizeBytes > MAX_IMAGE_SIZE_BYTES) {
+    return {
+      valid: false,
+      error: `Image size (${Math.round(image.fileSizeBytes / 1024)} KB) exceeds the 5MB upload limit.`
     };
   }
 
@@ -249,19 +260,23 @@ export async function triageComplaintWithGemini(
   let modelClient: GeminiModelClient | null = options.client || null;
 
   if (!modelClient) {
-    const key = options.apiKey || env.GEMINI_API_KEY;
-    if (!key || key.includes('placeholder')) {
-      return buildRulesFallbackTriage(input, 'GEMINI_API_KEY is not configured');
-    }
+    if (genAI) {
+      modelClient = genAI as unknown as GeminiModelClient;
+    } else {
+      const key = options.apiKey || env.GEMINI_API_KEY;
+      if (!key || key.includes('placeholder')) {
+        return buildRulesFallbackTriage(input, 'GEMINI_API_KEY is not configured');
+      }
 
-    try {
-      const activeGenAI = genAI || new GoogleGenAI({ apiKey: key });
-      modelClient = activeGenAI as unknown as GeminiModelClient;
-    } catch (clientErr) {
-      return buildRulesFallbackTriage(
-        input,
-        `GenAI client initialization error: ${(clientErr as Error).message}`
-      );
+      try {
+        const activeGenAI = new GoogleGenAI({ apiKey: key });
+        modelClient = activeGenAI as unknown as GeminiModelClient;
+      } catch (clientErr) {
+        return buildRulesFallbackTriage(
+          input,
+          `GenAI client initialization error: ${(clientErr as Error).message}`
+        );
+      }
     }
   }
 

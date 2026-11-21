@@ -9,15 +9,14 @@ import { issueRoutes } from './routes/issues.js';
 import { initFirebase } from './services/firebase.js';
 import { initGemini } from './services/gemini.js';
 
-export function buildApp(): FastifyInstance {
+export function buildApp(options?: { logger?: boolean }): FastifyInstance {
+  const isTest = process.env.NODE_ENV === 'test';
   const app = Fastify({
-    logger: {
-      level: env.NODE_ENV === 'production' ? 'info' : 'debug',
-      transport: env.NODE_ENV === 'development' ? {
-        target: 'pino-pretty',
-        options: { colorize: true }
-      } : undefined
-    }
+    logger: options?.logger !== undefined
+      ? options.logger
+      : (isTest ? false : {
+          level: env.NODE_ENV === 'production' ? 'info' : 'debug'
+        })
   });
 
   // Initialize service clients

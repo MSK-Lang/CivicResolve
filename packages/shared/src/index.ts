@@ -129,10 +129,13 @@ export type PublicImpact = z.infer<typeof PublicImpactSchema>;
 // Status lifecycle
 export const CivicIssueStatusSchema = z.enum([
   'submitted',
+  'processing',
   'triaged',
+  'needs_review',
   'in_progress',
   'resolved',
-  'closed'
+  'closed',
+  'failed'
 ]);
 export type CivicIssueStatus = z.infer<typeof CivicIssueStatusSchema>;
 
