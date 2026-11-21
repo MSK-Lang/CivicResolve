@@ -1,5 +1,31 @@
 # CivicResolve
 
+### Turning citizen complaints into actionable civic intelligence.
+
+CivicResolve is an AI-powered civic issue reporting and resolution platform designed to bridge the gap between citizens and local authorities.
+
+Traditional civic complaint systems often treat every report as an isolated request. Duplicate complaints, fragmented information, delayed prioritization and limited transparency make it difficult for authorities to identify what needs attention most.
+
+CivicResolve takes a different approach.
+
+Citizens can report local issues with descriptions, photographs and location information. The platform uses Google Gemini to interpret submitted reports, extract relevant information and assist with issue classification. A deterministic priority engine evaluates severity and public impact, while intelligent geographic clustering helps identify potentially related complaints.
+
+On the administrative side, civic authorities get a centralized interface to review reports, identify recurring problems, prioritize interventions and manage resolution workflows. Citizens can track their reports and follow their progress through the resolution lifecycle.
+
+**The goal is simple: move civic governance from fragmented complaint collection towards structured, transparent and data-informed problem resolution.**
+
+### What makes CivicResolve different?
+
+- **AI-assisted issue intelligence:** Multimodal analysis of citizen descriptions and photographic evidence using Google Gemini.
+- **Explainable prioritization:** Deterministic priority scoring based on issue severity and public impact.
+- **Geographic intelligence:** Identification of potentially related complaints based on proximity and issue similarity.
+- **Transparent resolution:** Report tracking, administrative workflows and auditable status updates.
+- **Citizen-first reporting:** A straightforward way to submit local issues and follow their progress.
+
+### Built with Google Technologies
+
+CivicResolve leverages Google Cloud and Firebase infrastructure, including Google Gemini for AI-assisted analysis, Cloud Firestore for persistent data, Firebase Storage for evidence uploads and Google Cloud Run for application deployment.
+
 > PromptWars GDG PSG iTech x H2S Hackathon Platform
 > Production-minded, minimal full-stack foundation for citizen-first civic issue reporting and municipal AI triage.
 
