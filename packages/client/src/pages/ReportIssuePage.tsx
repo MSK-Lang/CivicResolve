@@ -432,7 +432,7 @@ export function ReportIssuePage() {
             <Input
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Hazardous pothole on Elm Street"
+              placeholder="e.g. Deep pothole damaging two-wheelers on Avinashi Road"
               maxLength={120}
               required
             />
@@ -585,7 +585,7 @@ export function ReportIssuePage() {
             <Input
               value={address}
               onChange={e => setAddress(e.target.value)}
-              placeholder="e.g. 104 North Main Street"
+              placeholder="e.g. 12 Avinashi Road, near PSG Tech"
               required
             />
           </FormField>
@@ -599,7 +599,7 @@ export function ReportIssuePage() {
               <Input
                 value={neighborhood}
                 onChange={e => setNeighborhood(e.target.value)}
-                placeholder="Optional"
+                placeholder="e.g. Peelamedu, Ward 12"
               />
             </FormField>
 
@@ -634,7 +634,7 @@ export function ReportIssuePage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <FormField
               id="reporter-name"
               label="Your Name"
@@ -643,7 +643,7 @@ export function ReportIssuePage() {
               <Input
                 value={reporterName}
                 onChange={e => setReporterName(e.target.value)}
-                placeholder="Jane Doe"
+                placeholder="e.g. Priya Sharma"
               />
             </FormField>
 
@@ -656,7 +656,20 @@ export function ReportIssuePage() {
                 type="email"
                 value={reporterEmail}
                 onChange={e => setReporterEmail(e.target.value)}
-                placeholder="jane@example.org"
+                placeholder="e.g. priya.sharma@example.com"
+              />
+            </FormField>
+
+            <FormField
+              id="reporter-phone"
+              label="Mobile Number"
+              error={fieldErrors.reporterPhone}
+            >
+              <Input
+                type="tel"
+                value={reporterPhone}
+                onChange={e => setReporterPhone(e.target.value)}
+                placeholder="e.g. +91 98765 43210"
               />
             </FormField>
           </div>

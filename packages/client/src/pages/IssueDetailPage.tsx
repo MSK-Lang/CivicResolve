@@ -72,10 +72,12 @@ export function IssueDetailPage() {
     issue.aiTriage?.assignedDepartment ||
     'Municipal Operations Dispatch';
 
-  const formattedDate = new Date(issue.createdAt).toLocaleDateString(undefined, {
-    year: 'numeric',
+  const formattedDate = new Date(issue.createdAt).toLocaleDateString('en-IN', {
+    day: '2-digit',
     month: 'short',
-    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 
   const getConfidencePercentage = (): number => {

@@ -9,9 +9,10 @@ interface IssueCardProps {
 }
 
 export function IssueCard({ issue }: IssueCardProps) {
-  const formattedDate = new Date(issue.createdAt).toLocaleDateString(undefined, {
+  const formattedDate = new Date(issue.createdAt).toLocaleDateString('en-IN', {
+    day: '2-digit',
     month: 'short',
-    day: 'numeric',
+    year: 'numeric',
   });
 
   return (
