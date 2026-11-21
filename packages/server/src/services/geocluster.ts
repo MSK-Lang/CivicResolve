@@ -41,57 +41,76 @@ export async function detectGeoClusters(): Promise<DuplicateCandidate[]> {
     });
   }
 
-  // Find pairs with same category and distance <= 500m
-  for (let i = 0; i < issues.length; i++) {
-    const a = issues[i];
-    const aLat = a.location.latitude;
-    const aLon = a.location.longitude;
-    if (typeof aLat !== 'number' || typeof aLon !== 'number') continue;
+  // Group issues by category to eliminate cross-category comparisons (partitions search space)
+  const categoryBuckets = new Map<string, CivicIssue[]>();
+  for (const issue of issues) {
+    if (typeof issue.location.latitude !== 'number' || typeof issue.location.longitude !== 'number') {
+      continue;
+    }
+    const list = categoryBuckets.get(issue.category) || [];
+    list.push(issue);
+    categoryBuckets.set(issue.category, list);
+  }
 
-    for (let j = i + 1; j < issues.length; j++) {
-      const b = issues[j];
-      if (a.category !== b.category) continue;
-      const bLat = b.location.latitude;
-      const bLon = b.location.longitude;
-      if (typeof bLat !== 'number' || typeof bLon !== 'number') continue;
+  // Spatial bounding-box thresholds for 500 meters (~0.0045 deg lat, ~0.007 deg lon)
+  const MAX_LAT_DIFF = 0.005;
+  const MAX_LON_DIFF = 0.008;
 
-      const distance = calculateHaversineDistanceMeters(
-        { latitude: aLat, longitude: aLon },
-        { latitude: bLat, longitude: bLon }
-      );
+  for (const categoryIssues of categoryBuckets.values()) {
+    const count = categoryIssues.length;
+    for (let i = 0; i < count; i++) {
+      const a = categoryIssues[i];
+      const aLat = a.location.latitude!;
+      const aLon = a.location.longitude!;
 
-      if (distance <= GEO_CLUSTER_RADIUS_METERS) {
-        // Deterministic cluster ID based on sorted report UUIDs
-        const pairId = [a.id, b.id].sort().join('_cluster_');
-        const decision = existingDecisions.get(pairId);
+      for (let j = i + 1; j < count; j++) {
+        const b = categoryIssues[j];
+        const bLat = b.location.latitude!;
+        const bLon = b.location.longitude!;
 
-        const candidate: DuplicateCandidate = {
-          id: pairId,
-          primaryReport: {
-            id: a.id,
-            title: a.title,
+        // Fast bounding-box pre-filter: skip expensive Haversine trigonometric calls
+        if (Math.abs(aLat - bLat) > MAX_LAT_DIFF || Math.abs(aLon - bLon) > MAX_LON_DIFF) {
+          continue;
+        }
+
+        const distance = calculateHaversineDistanceMeters(
+          { latitude: aLat, longitude: aLon },
+          { latitude: bLat, longitude: bLon }
+        );
+
+        if (distance <= GEO_CLUSTER_RADIUS_METERS) {
+          // Deterministic cluster ID based on sorted report UUIDs
+          const pairId = [a.id, b.id].sort().join('_cluster_');
+          const decision = existingDecisions.get(pairId);
+
+          const candidate: DuplicateCandidate = {
+            id: pairId,
+            primaryReport: {
+              id: a.id,
+              title: a.title,
+              category: a.category,
+              address: a.location.address,
+              createdAt: a.createdAt,
+              status: a.status,
+            },
+            duplicateReport: {
+              id: b.id,
+              title: b.title,
+              category: b.category,
+              address: b.location.address,
+              createdAt: b.createdAt,
+              status: b.status,
+            },
+            distanceMeters: Math.round(distance),
             category: a.category,
-            address: a.location.address,
-            createdAt: a.createdAt,
-            status: a.status,
-          },
-          duplicateReport: {
-            id: b.id,
-            title: b.title,
-            category: b.category,
-            address: b.location.address,
-            createdAt: b.createdAt,
-            status: b.status,
-          },
-          distanceMeters: distance,
-          category: a.category,
-          status: decision?.status || 'pending',
-          reviewedBy: decision?.reviewedBy,
-          reviewedAt: decision?.reviewedAt,
-          notes: decision?.notes,
-        };
+            status: decision?.status || 'pending',
+            reviewedBy: decision?.reviewedBy,
+            reviewedAt: decision?.reviewedAt,
+            notes: decision?.notes,
+          };
 
-        candidates.push(candidate);
+          candidates.push(candidate);
+        }
       }
     }
   }

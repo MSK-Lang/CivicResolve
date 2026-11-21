@@ -65,10 +65,23 @@ export interface TriageOptions {
 
 export type TriageResult = TriageEvaluation & GeminiTriageResult;
 
+// In-memory triage cache for identical complaints (saves duplicate Gemini calls & latency)
+interface CachedTriage {
+  result: TriageResult;
+  cachedAt: number;
+}
+const TRIAGE_CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes TTL
+const triageCache = new Map<string, CachedTriage>();
+
+export function clearTriageCache(): void {
+  triageCache.clear();
+}
+
 // Global singleton client
 let genAI: GoogleGenAI | null = null;
 
 export function initGemini(): void {
+  if (genAI) return;
   if (env.GEMINI_API_KEY && !env.GEMINI_API_KEY.includes('placeholder')) {
     try {
       genAI = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
@@ -91,6 +104,7 @@ export function setGeminiClient(client: GeminiModelClient | null): void {
 
 export function resetGeminiClient(): void {
   genAI = null;
+  clearTriageCache();
 }
 
 // ============================================================================
@@ -256,6 +270,19 @@ export async function triageComplaintWithGemini(
     throw new InvalidInputError(imageValidation.error || 'Invalid image upload');
   }
 
+  // Fast path: Check in-memory triage cache for identical reports (prevents duplicate Gemini API calls)
+  const cacheKey = `${input.category}::${input.title.trim().toLowerCase()}::${input.description.trim().toLowerCase()}`;
+  const now = Date.now();
+  if (!options.client) {
+    const cached = triageCache.get(cacheKey);
+    if (cached && (now - cached.cachedAt) < TRIAGE_CACHE_TTL_MS) {
+      return {
+        ...cached.result,
+        evaluatedAt: new Date().toISOString()
+      };
+    }
+  }
+
   // 2. Resolve client: custom mock client or initialized Google GenAI instance
   let modelClient: GeminiModelClient | null = options.client || null;
 
@@ -409,7 +436,7 @@ Output MUST be a single, valid JSON object matching this schema:
 
   const urgency: CivicIssueUrgency = data.severity;
 
-  return {
+  const finalTriageResult: TriageResult = {
     triageSource: 'gemini',
     aiConfidence: data.confidence, // Genuine AI confidence
     confidenceScore: data.confidence,
@@ -427,6 +454,16 @@ Output MUST be a single, valid JSON object matching this schema:
     suggestedActionItems: data.suggestedActionItems,
     evaluatedAt: new Date().toISOString()
   };
+
+  if (!options.client) {
+    if (triageCache.size > 200) {
+      const oldestKey = triageCache.keys().next().value;
+      if (oldestKey) triageCache.delete(oldestKey);
+    }
+    triageCache.set(cacheKey, { result: finalTriageResult, cachedAt: now });
+  }
+
+  return finalTriageResult;
 }
 
 /**

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   fetchAdminIssues,
   fetchAdminIssueById,
@@ -211,31 +211,44 @@ export function AdminDashboardPage() {
     }
   };
 
-  // Client-side priority filter (backend list endpoint filters category & status)
-  const filteredIssues = issues.filter(issue => {
-    if (categoryFilter !== 'all' && issue.category !== categoryFilter) return false;
-    if (statusFilter !== 'all' && issue.status !== statusFilter) return false;
-    if (priorityFilter !== 'all') {
-      const pLevel = issue.priorityScore?.priorityLevel;
-      if (pLevel !== priorityFilter) return false;
+  // Memoized client-side priority filter (backend list endpoint filters category & status)
+  const filteredIssues = useMemo(() => {
+    return issues.filter(issue => {
+      if (categoryFilter !== 'all' && issue.category !== categoryFilter) return false;
+      if (statusFilter !== 'all' && issue.status !== statusFilter) return false;
+      if (priorityFilter !== 'all') {
+        const pLevel = issue.priorityScore?.priorityLevel;
+        if (pLevel !== priorityFilter) return false;
+      }
+      return true;
+    });
+  }, [issues, categoryFilter, statusFilter, priorityFilter]);
+
+  // Memoized genuine real-data metrics in a single O(N) pass
+  const { pendingReviewCount, highPriorityCount, resolvedCount } = useMemo(() => {
+    let pending = 0;
+    let high = 0;
+    let resolved = 0;
+
+    for (const i of issues) {
+      if (i.status === 'submitted' || i.status === 'needs_review' || i.status === 'triaged') {
+        pending++;
+      }
+      if (
+        i.priorityScore?.priorityLevel === 'P1_CRITICAL' ||
+        i.priorityScore?.priorityLevel === 'P2_HIGH' ||
+        i.urgency === 'high' ||
+        i.urgency === 'critical'
+      ) {
+        high++;
+      }
+      if (i.status === 'resolved' || i.status === 'closed') {
+        resolved++;
+      }
     }
-    return true;
-  });
 
-  // Calculate genuine real-data metrics
-  const pendingReviewCount = issues.filter(
-    i => i.status === 'submitted' || i.status === 'needs_review' || i.status === 'triaged'
-  ).length;
-
-  const highPriorityCount = issues.filter(
-    i =>
-      i.priorityScore?.priorityLevel === 'P1_CRITICAL' ||
-      i.priorityScore?.priorityLevel === 'P2_HIGH' ||
-      i.urgency === 'high' ||
-      i.urgency === 'critical'
-  ).length;
-
-  const resolvedCount = issues.filter(i => i.status === 'resolved' || i.status === 'closed').length;
+    return { pendingReviewCount: pending, highPriorityCount: high, resolvedCount: resolved };
+  }, [issues]);
 
   // Render Login Gate for Unauthenticated Visitors
   if (!isAuthenticated) {
