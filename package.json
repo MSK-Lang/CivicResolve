@@ -1,0 +1,21 @@
+{
+  "name": "civicresolve",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build --workspace=@civicresolve/shared",
+    "build:client": "npm run build --workspace=@civicresolve/client",
+    "build:server": "npm run build --workspace=@civicresolve/server",
+    "build": "npm run build:shared && npm run build:client && npm run build:server",
+    "dev:server": "npm run dev --workspace=@civicresolve/server",
+    "dev:client": "npm run dev --workspace=@civicresolve/client",
+    "start": "node packages/server/dist/index.js",
+    "clean": "node -e \"const fs = require('fs'); ['packages/shared/dist','packages/server/dist','packages/client/dist'].forEach(d => fs.rmSync(d, { recursive: true, force: true }));\""
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
