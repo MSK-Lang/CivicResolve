@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import {
   fetchAdminIssues,
   fetchAdminIssueById,
@@ -22,6 +22,10 @@ import {
   Layers,
   Filter,
 } from 'lucide-react';
+
+const GeographicIntelligenceMap = lazy(() =>
+  import('../components/admin/GeographicIntelligenceMap').then(m => ({ default: m.GeographicIntelligenceMap }))
+);
 
 const CATEGORIES: { value: string; label: string }[] = [
   { value: 'all', label: 'All Categories' },
@@ -394,6 +398,24 @@ export function AdminDashboardPage() {
           <span className="text-[11px] text-ink-muted">Successfully closed out</span>
         </div>
       </div>
+
+      {/* Geographic Intelligence Map Panel */}
+      <Suspense
+        fallback={
+          <div className="h-64 bg-surface rounded border border-border flex items-center justify-center p-6 text-xs text-ink-muted animate-pulse">
+            Loading Geographic Intelligence Map...
+          </div>
+        }
+      >
+        <GeographicIntelligenceMap
+          issues={issues}
+          clusters={clusters}
+          onSelectIssue={handleOpenDetail}
+          initialCategory={categoryFilter}
+          initialStatus={statusFilter}
+          initialPriority={priorityFilter}
+        />
+      </Suspense>
 
       {/* GeoCluster Duplicates Review Section */}
       {clusters.length > 0 && (

@@ -31,7 +31,8 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom', 'react-router-dom'],
-          lucide: ['lucide-react']
+          lucide: ['lucide-react'],
+          leaflet: ['leaflet', 'react-leaflet']
         }
       }
     }
