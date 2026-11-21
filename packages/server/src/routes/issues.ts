@@ -20,6 +20,7 @@ import {
   InvalidInputError
 } from '../services/gemini.js';
 import { calculatePriorityScore } from '../services/priority.js';
+import { detectGeoClusters, recordClusterDecision } from '../services/geocluster.js';
 import { requireAdminAuth } from '../middleware/auth.js';
 import { submissionRateLimiter, readRateLimiter } from '../middleware/rate-limiter.js';
 import crypto from 'crypto';
@@ -583,4 +584,45 @@ export const issueRoutes: FastifyPluginAsync = async (fastify) => {
       };
     }
   );
+
+  // GET /api/admin/clusters - Deterministic 500m GeoCluster duplicate report detection
+  fastify.get('/api/admin/clusters', async (request, reply) => {
+    const candidates = await detectGeoClusters();
+    return {
+      success: true,
+      data: candidates,
+      count: candidates.length,
+      radiusMeters: 500
+    };
+  });
+
+  // POST /api/admin/clusters/:id/decision - Approve or reject duplicate suggestion
+  fastify.post<{
+    Params: { id: string };
+    Body: { decision: 'approved' | 'rejected'; notes?: string };
+  }>('/api/admin/clusters/:id/decision', async (request, reply) => {
+    const { id } = request.params;
+    const { decision, notes } = request.body || {};
+
+    if (!decision || (decision !== 'approved' && decision !== 'rejected')) {
+      return reply.status(400).send({
+        success: false,
+        error: 'Bad Request',
+        message: 'Field "decision" must be either "approved" or "rejected"'
+      });
+    }
+
+    const updated = await recordClusterDecision({
+      clusterId: id,
+      decision,
+      reviewer: request.adminUser?.email || 'admin@citygov.org',
+      notes
+    });
+
+    return {
+      success: true,
+      data: updated,
+      message: `Duplicate suggestion marked as ${decision}.`
+    };
+  });
 };
