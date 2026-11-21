@@ -12,6 +12,7 @@ import { initGemini } from './services/gemini.js';
 export function buildApp(options?: { logger?: boolean }): FastifyInstance {
   const isTest = process.env.NODE_ENV === 'test';
   const app = Fastify({
+    bodyLimit: 6 * 1024 * 1024, // 6MB maximum HTTP body payload limit
     logger: options?.logger !== undefined
       ? options.logger
       : (isTest ? false : {

@@ -1,6 +1,6 @@
 import admin from 'firebase-admin';
 import { env } from '../config/env.js';
-import type { CivicIssue, ImageMetadata, CivicIssueCategory, CivicIssueStatus } from '@civicresolve/shared';
+import type { CivicIssue, ImageMetadata, CivicIssueCategory, CivicIssueStatus, ReportAuditEvent } from '@civicresolve/shared';
 
 let isFirebaseInitialized = false;
 let firestoreDb: admin.firestore.Firestore | null = null;
@@ -301,6 +301,57 @@ export const IssueRepository = {
     if (!existing) return null;
 
     const merged = { ...existing, ...updates, updatedAt: new Date().toISOString() };
+    inMemoryIssues.set(id, merged);
+    return merged;
+  },
+
+  /**
+   * Atomically updates report fields AND appends an audit event in a single transaction.
+   * Uses Firestore runTransaction in production to prevent race conditions or dropped audit events.
+   */
+  async atomicUpdateWithAudit(
+    id: string,
+    updates: Partial<CivicIssue>,
+    auditEvent: ReportAuditEvent
+  ): Promise<CivicIssue | null> {
+    if (env.NODE_ENV === 'production' && !isFirebaseReady()) {
+      throw new Error('Firestore is required in production mode.');
+    }
+
+    if (isFirebaseReady() && firestoreDb) {
+      const docRef = firestoreDb.collection('issues').doc(id);
+      return await firestoreDb.runTransaction(async (transaction) => {
+        const doc = await transaction.get(docRef);
+        if (!doc.exists) return null;
+
+        const current = doc.data() as CivicIssue;
+        const currentAudit = current.auditHistory || [];
+        const mergedAudit = [...currentAudit, auditEvent];
+
+        const finalUpdates = {
+          ...updates,
+          auditHistory: mergedAudit,
+          updatedAt: new Date().toISOString()
+        };
+
+        transaction.update(docRef, finalUpdates);
+        return { ...current, ...finalUpdates };
+      });
+    }
+
+    // In-memory atomic update for development and testing
+    const existing = inMemoryIssues.get(id);
+    if (!existing) return null;
+
+    const currentAudit = existing.auditHistory || [];
+    const mergedAudit = [...currentAudit, auditEvent];
+
+    const merged = {
+      ...existing,
+      ...updates,
+      auditHistory: mergedAudit,
+      updatedAt: new Date().toISOString()
+    };
     inMemoryIssues.set(id, merged);
     return merged;
   },

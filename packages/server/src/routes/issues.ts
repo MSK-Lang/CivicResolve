@@ -21,6 +21,7 @@ import {
 } from '../services/gemini.js';
 import { calculatePriorityScore } from '../services/priority.js';
 import { requireAdminAuth } from '../middleware/auth.js';
+import { submissionRateLimiter, readRateLimiter } from '../middleware/rate-limiter.js';
 import crypto from 'crypto';
 import { z } from 'zod';
 
@@ -118,7 +119,7 @@ export const issueRoutes: FastifyPluginAsync = async (fastify) => {
   // ==========================================================================
 
   // GET /api/issues - Retrieve civic reports with pagination (PII redacted)
-  fastify.get('/api/issues', async (request, reply) => {
+  fastify.get('/api/issues', { preHandler: [readRateLimiter] }, async (request, reply) => {
     const parseResult = ListIssuesQuerySchema.safeParse(request.query);
 
     if (!parseResult.success) {
@@ -151,7 +152,10 @@ export const issueRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // GET /api/issues/:id - Retrieve single report and triage details (PII redacted)
-  fastify.get<{ Params: { id: string } }>('/api/issues/:id', async (request, reply) => {
+  fastify.get<{ Params: { id: string } }>(
+    '/api/issues/:id',
+    { preHandler: [readRateLimiter] },
+    async (request, reply) => {
     const { id } = request.params;
     if (!id || typeof id !== 'string' || id.trim().length === 0) {
       return reply.status(400).send({
@@ -178,7 +182,10 @@ export const issueRoutes: FastifyPluginAsync = async (fastify) => {
   });
 
   // POST /api/issues - Create a report, persist initial submission, run triage & priority
-  fastify.post('/api/issues', async (request, reply) => {
+  fastify.post(
+    '/api/issues',
+    { preHandler: [submissionRateLimiter] },
+    async (request, reply) => {
     // 1. Validate submission payload against strict shared schema
     const parseResult = CreateIssueInputSchema.safeParse(request.body);
 
@@ -507,14 +514,14 @@ export const issueRoutes: FastifyPluginAsync = async (fastify) => {
         timestamp: now
       });
 
-      const updatedHistory = [...currentAuditHistory, auditEvent];
-
-      const updated = await IssueRepository.update(id.trim(), {
-        ...(updates.status ? { status: updates.status } : {}),
-        ...(updates.urgency ? { urgency: updates.urgency } : {}),
-        auditHistory: updatedHistory,
-        updatedAt: now
-      });
+      const updated = await IssueRepository.atomicUpdateWithAudit(
+        id.trim(),
+        {
+          ...(updates.status ? { status: updates.status } : {}),
+          ...(updates.urgency ? { urgency: updates.urgency } : {})
+        },
+        auditEvent
+      );
 
       return {
         success: true,

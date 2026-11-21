@@ -97,7 +97,28 @@ export async function requireAdminAuth(
   }
 
   try {
-    const decodedToken = await auth.verifyIdToken(token);
+    // Verify token with revocation check enabled (checkRevoked: true)
+    // Ensures credentials revoked in Firebase Console or via admin script are immediately denied
+    const decodedToken = await auth.verifyIdToken(token, true);
+
+    // Validate expected Project ID / Audience
+    if (env.FIREBASE_PROJECT_ID) {
+      if (decodedToken.aud !== env.FIREBASE_PROJECT_ID) {
+        return reply.status(401).send({
+          success: false,
+          error: 'Unauthorized',
+          message: 'Token audience does not match the configured Firebase project.'
+        });
+      }
+      const expectedIssuer = `https://securetoken.google.com/${env.FIREBASE_PROJECT_ID}`;
+      if (decodedToken.iss !== expectedIssuer) {
+        return reply.status(401).send({
+          success: false,
+          error: 'Unauthorized',
+          message: 'Token issuer does not match the expected project authority.'
+        });
+      }
+    }
 
     // Verify administrative privileges strictly from server-verified token claims
     // Client-supplied headers or body flags are never trusted
@@ -117,10 +138,18 @@ export async function requireAdminAuth(
       role: 'admin'
     };
   } catch (err) {
+    const errorMsg = (err as Error).message || '';
+    if (errorMsg.includes('revoked') || (err as any).code === 'auth/id-token-revoked') {
+      return reply.status(401).send({
+        success: false,
+        error: 'Unauthorized',
+        message: 'Administrative session has been revoked. Re-authentication required.'
+      });
+    }
     return reply.status(401).send({
       success: false,
       error: 'Unauthorized',
-      message: `Invalid or revoked token: ${(err as Error).message}`
+      message: `Invalid or expired token: ${errorMsg}`
     });
   }
 }
