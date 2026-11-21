@@ -1,4 +1,6 @@
 import admin from 'firebase-admin';
+import fs from 'fs';
+import path from 'path';
 import { env } from '../config/env.js';
 import type { CivicIssue, ImageMetadata, CivicIssueCategory, CivicIssueStatus, ReportAuditEvent } from '@civicresolve/shared';
 
@@ -91,11 +93,45 @@ export function initFirebase(): void {
     }
   }
 
-  // Attempt 2: Application Default Credentials (e.g. running inside Cloud Run or with GOOGLE_APPLICATION_CREDENTIALS)
-  if (env.GOOGLE_APPLICATION_CREDENTIALS || process.env.K_SERVICE || env.FIREBASE_PROJECT_ID) {
+  // Attempt 2: Local Service Account JSON file (via GOOGLE_APPLICATION_CREDENTIALS or auto-discovered service-account.json)
+  const candidateKeyPaths = [
+    env.GOOGLE_APPLICATION_CREDENTIALS,
+    path.resolve(process.cwd(), 'service-account.json'),
+    path.resolve(process.cwd(), '../service-account.json'),
+    path.resolve(process.cwd(), '../../service-account.json')
+  ].filter(Boolean) as string[];
+
+  for (const keyPath of candidateKeyPaths) {
+    const resolvedPath = path.isAbsolute(keyPath) ? keyPath : path.resolve(process.cwd(), keyPath);
+    if (fs.existsSync(resolvedPath)) {
+      try {
+        admin.initializeApp({
+          credential: admin.credential.cert(resolvedPath),
+          projectId: env.FIREBASE_PROJECT_ID,
+          storageBucket: env.FIREBASE_PROJECT_ID ? `${env.FIREBASE_PROJECT_ID}.appspot.com` : undefined
+        });
+        isFirebaseInitialized = true;
+        firestoreDb = admin.firestore();
+        firebaseAuth = admin.auth();
+        try {
+          firebaseBucket = admin.storage().bucket();
+        } catch {
+          firebaseBucket = null;
+        }
+        console.log(`Firebase Admin initialized with service account file: ${path.basename(resolvedPath)}`);
+        return;
+      } catch (err) {
+        console.warn(`Failed to initialize Firebase from ${resolvedPath}:`, (err as Error).message);
+      }
+    }
+  }
+
+  // Attempt 3: Application Default Credentials in GCP environment (Cloud Run / App Engine / GCE)
+  if (process.env.K_SERVICE || process.env.GOOGLE_CLOUD_PROJECT || (env.GOOGLE_APPLICATION_CREDENTIALS && fs.existsSync(env.GOOGLE_APPLICATION_CREDENTIALS))) {
     try {
       admin.initializeApp({
-        projectId: env.FIREBASE_PROJECT_ID,
+        credential: admin.credential.applicationDefault(),
+        projectId: env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT,
         storageBucket: env.FIREBASE_PROJECT_ID ? `${env.FIREBASE_PROJECT_ID}.appspot.com` : undefined
       });
       isFirebaseInitialized = true;

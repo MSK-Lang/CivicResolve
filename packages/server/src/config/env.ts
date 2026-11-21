@@ -4,6 +4,7 @@ import path from 'path';
 
 // Load .env from root or local
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config({ path: path.resolve(process.cwd(), '../.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '../../.env') });
 
 const EnvSchema = z.object({
