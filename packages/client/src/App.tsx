@@ -8,7 +8,7 @@ import { HealthCheckPage } from './pages/HealthCheckPage';
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-paper-bg text-ink-primary font-sans selection:bg-civic-100 selection:text-civic-950">
+    <div className="min-h-screen flex flex-col bg-canvas text-ink-primary font-sans selection:bg-accent/15 selection:text-ink-primary">
       <Navbar />
       <div className="flex-1">
         <Routes>

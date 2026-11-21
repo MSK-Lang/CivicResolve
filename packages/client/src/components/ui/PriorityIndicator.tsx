@@ -12,94 +12,26 @@ export interface PriorityIndicatorProps {
 
 const priorityConfig: Record<
   string,
-  {
-    code: string;
-    label: string;
-    bg: string;
-    text: string;
-    border: string;
-    Icon: typeof AlertTriangle;
-  }
+  { code: string; label: string; bg: string; text: string; border: string; Icon: typeof AlertTriangle }
 > = {
-  p1_critical: {
-    code: 'P1',
-    label: 'Critical',
-    bg: 'bg-red-50',
-    text: 'text-red-900',
-    border: 'border-red-300',
-    Icon: ShieldAlert,
-  },
-  critical: {
-    code: 'P1',
-    label: 'Critical',
-    bg: 'bg-red-50',
-    text: 'text-red-900',
-    border: 'border-red-300',
-    Icon: ShieldAlert,
-  },
-  p2_high: {
-    code: 'P2',
-    label: 'High',
-    bg: 'bg-orange-50',
-    text: 'text-orange-950',
-    border: 'border-orange-300',
-    Icon: AlertTriangle,
-  },
-  high: {
-    code: 'P2',
-    label: 'High',
-    bg: 'bg-orange-50',
-    text: 'text-orange-950',
-    border: 'border-orange-300',
-    Icon: AlertTriangle,
-  },
-  p3_medium: {
-    code: 'P3',
-    label: 'Medium',
-    bg: 'bg-amber-50',
-    text: 'text-amber-950',
-    border: 'border-amber-300',
-    Icon: Clock,
-  },
-  medium: {
-    code: 'P3',
-    label: 'Medium',
-    bg: 'bg-amber-50',
-    text: 'text-amber-950',
-    border: 'border-amber-300',
-    Icon: Clock,
-  },
-  p4_low: {
-    code: 'P4',
-    label: 'Low',
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-950',
-    border: 'border-emerald-300',
-    Icon: CheckCircle2,
-  },
-  low: {
-    code: 'P4',
-    label: 'Low',
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-950',
-    border: 'border-emerald-300',
-    Icon: CheckCircle2,
-  },
+  p1_critical: { code: 'P1', label: 'Critical', bg: 'bg-[#FBEBEB]', text: 'text-[#8A2222]', border: 'border-[#F3C7C7]', Icon: ShieldAlert },
+  critical: { code: 'P1', label: 'Critical', bg: 'bg-[#FBEBEB]', text: 'text-[#8A2222]', border: 'border-[#F3C7C7]', Icon: ShieldAlert },
+  p2_high: { code: 'P2', label: 'High', bg: 'bg-[#FDF2E9]', text: 'text-[#914811]', border: 'border-[#F8D5B7]', Icon: AlertTriangle },
+  high: { code: 'P2', label: 'High', bg: 'bg-[#FDF2E9]', text: 'text-[#914811]', border: 'border-[#F8D5B7]', Icon: AlertTriangle },
+  p3_medium: { code: 'P3', label: 'Medium', bg: 'bg-[#FEF9E7]', text: 'text-[#7A5B0B]', border: 'border-[#F5E5A8]', Icon: Clock },
+  medium: { code: 'P3', label: 'Medium', bg: 'bg-[#FEF9E7]', text: 'text-[#7A5B0B]', border: 'border-[#F5E5A8]', Icon: Clock },
+  p4_low: { code: 'P4', label: 'Low', bg: 'bg-[#EDF6F0]', text: 'text-[#306B48]', border: 'border-[#C6E6D1]', Icon: CheckCircle2 },
+  low: { code: 'P4', label: 'Low', bg: 'bg-[#EDF6F0]', text: 'text-[#306B48]', border: 'border-[#C6E6D1]', Icon: CheckCircle2 },
 };
 
-export function PriorityIndicator({
-  priority,
-  score,
-  showIcon = true,
-  className = '',
-}: PriorityIndicatorProps) {
+export function PriorityIndicator({ priority, score, showIcon = true, className = '' }: PriorityIndicatorProps) {
   const normalized = priority.toLowerCase().replace(/[\s-]/g, '_');
   const config = priorityConfig[normalized] || {
     code: 'P?',
     label: priority,
-    bg: 'bg-slate-100',
-    text: 'text-slate-800',
-    border: 'border-slate-300',
+    bg: 'bg-surface-subtle',
+    text: 'text-ink-primary',
+    border: 'border-border',
     Icon: HelpCircle,
   };
 
@@ -108,14 +40,14 @@ export function PriorityIndicator({
   return (
     <span
       role="status"
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md border ${config.bg} ${config.text} ${config.border} select-none ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded border ${config.bg} ${config.text} ${config.border} select-none ${className}`}
     >
-      {showIcon && <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
-      <span className="font-mono tracking-tight">{config.code}</span>
+      {showIcon && <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />}
+      <span className="font-mono text-[11px] font-semibold">{config.code}</span>
       <span>{config.label}</span>
       {typeof score === 'number' && (
-        <span className="font-mono text-[11px] opacity-80 border-l border-current pl-1.5 ml-0.5">
-          {score}/100
+        <span className="font-mono text-[11px] opacity-75 border-l border-current pl-1 ml-0.5">
+          {score}
         </span>
       )}
     </span>

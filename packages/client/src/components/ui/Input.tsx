@@ -9,14 +9,14 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   ref
 ) {
   const baseClasses =
-    'w-full min-h-[44px] px-3.5 py-2.5 bg-paper-card text-ink-primary text-sm rounded-md ' +
+    'w-full min-h-[44px] px-3 py-2 bg-surface text-ink-primary text-sm rounded ' +
     'border transition-colors placeholder:text-ink-muted ' +
     'focus-visible:outline-2 focus-visible:outline-offset-2 ' +
-    'disabled:opacity-60 disabled:cursor-not-allowed motion-reduce:transition-none';
+    'disabled:opacity-50 disabled:cursor-not-allowed motion-reduce:transition-none';
 
   const stateClasses = hasError
-    ? 'border-red-600 focus-visible:outline-red-700 focus-visible:border-red-600'
-    : 'border-border-strong focus-visible:outline-civic-800 focus-visible:border-civic-800';
+    ? 'border-[#8A2222] focus-visible:outline-[#8A2222]'
+    : 'border-border focus-visible:outline-accent';
 
   return (
     <input
@@ -38,14 +38,14 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function 
   ref
 ) {
   const baseClasses =
-    'w-full min-h-[88px] px-3.5 py-2.5 bg-paper-card text-ink-primary text-sm rounded-md ' +
+    'w-full min-h-[88px] px-3 py-2 bg-surface text-ink-primary text-sm rounded ' +
     'border transition-colors placeholder:text-ink-muted leading-relaxed ' +
     'focus-visible:outline-2 focus-visible:outline-offset-2 ' +
-    'disabled:opacity-60 disabled:cursor-not-allowed motion-reduce:transition-none';
+    'disabled:opacity-50 disabled:cursor-not-allowed motion-reduce:transition-none';
 
   const stateClasses = hasError
-    ? 'border-red-600 focus-visible:outline-red-700 focus-visible:border-red-600'
-    : 'border-border-strong focus-visible:outline-civic-800 focus-visible:border-civic-800';
+    ? 'border-[#8A2222] focus-visible:outline-[#8A2222]'
+    : 'border-border focus-visible:outline-accent';
 
   return (
     <textarea

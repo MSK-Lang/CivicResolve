@@ -8,7 +8,7 @@ export interface LoadingStateProps {
 }
 
 export function LoadingState({
-  label = 'Loading municipal data...',
+  label = 'Loading...',
   className = '',
 }: LoadingStateProps) {
   return (
@@ -16,13 +16,13 @@ export function LoadingState({
       role="status"
       aria-live="polite"
       aria-busy="true"
-      className={`flex flex-col items-center justify-center p-8 sm:p-12 text-ink-secondary ${className}`}
+      className={`flex flex-col items-center justify-center p-8 text-ink-secondary ${className}`}
     >
       <Loader2
-        className="w-7 h-7 animate-spin text-civic-800 mb-3 motion-reduce:animate-none"
+        className="w-5 h-5 animate-spin text-accent mb-2 motion-reduce:animate-none"
         aria-hidden="true"
       />
-      <p className="text-sm font-medium text-ink-primary">{label}</p>
+      <p className="text-xs text-ink-secondary">{label}</p>
     </div>
   );
 }
@@ -46,18 +46,18 @@ export function EmptyState({
 }: EmptyStateProps) {
   return (
     <div
-      className={`rounded-lg border-2 border-dashed border-border-strong p-8 sm:p-10 text-center bg-paper-card my-6 ${className}`}
+      className={`rounded border border-border p-6 text-center bg-surface my-4 ${className}`}
     >
-      <div className="inline-flex items-center justify-center w-12 h-12 rounded-md bg-paper-subtle text-ink-secondary mb-3 border border-border-subtle">
-        {icon || <Inbox className="w-6 h-6" aria-hidden="true" />}
+      <div className="inline-flex items-center justify-center w-8 h-8 rounded bg-surface-subtle text-ink-muted mb-2.5">
+        {icon || <Inbox className="w-4 h-4" aria-hidden="true" />}
       </div>
-      <h3 className="text-base font-semibold text-ink-primary tracking-tight">{title}</h3>
-      <p className="mt-1 text-sm text-ink-secondary max-w-md mx-auto leading-relaxed">
+      <h3 className="text-sm font-semibold text-ink-primary">{title}</h3>
+      <p className="mt-1 text-xs text-ink-secondary max-w-sm mx-auto leading-relaxed">
         {description}
       </p>
       {actionLabel && onAction && (
-        <div className="mt-5">
-          <Button type="button" variant="primary" onClick={onAction}>
+        <div className="mt-4">
+          <Button type="button" variant="secondary" size="sm" onClick={onAction}>
             {actionLabel}
           </Button>
         </div>
@@ -74,7 +74,7 @@ export interface ErrorStateProps {
 }
 
 export function ErrorState({
-  title = 'Service Unavailable',
+  title = 'Service Notice',
   message,
   onRetry,
   className = '',
@@ -83,16 +83,16 @@ export function ErrorState({
     <div
       role="alert"
       aria-live="assertive"
-      className={`rounded-lg border border-red-300 bg-red-50 p-6 text-center my-6 ${className}`}
+      className={`rounded border border-[#F3C7C7] bg-[#FBEBEB] p-4 text-center my-4 ${className}`}
     >
-      <div className="inline-flex items-center justify-center w-12 h-12 rounded-md bg-red-100 text-red-800 mb-3 border border-red-200">
-        <AlertCircle className="w-6 h-6" aria-hidden="true" />
+      <div className="inline-flex items-center justify-center w-7 h-7 rounded bg-white text-[#8A2222] mb-2">
+        <AlertCircle className="w-4 h-4" aria-hidden="true" />
       </div>
-      <h3 className="text-base font-semibold text-red-950 tracking-tight">{title}</h3>
-      <p className="mt-1.5 text-sm text-red-900 max-w-md mx-auto leading-relaxed">{message}</p>
+      <h3 className="text-sm font-semibold text-[#8A2222]">{title}</h3>
+      <p className="mt-1 text-xs text-[#8A2222]/80 max-w-sm mx-auto">{message}</p>
       {onRetry && (
-        <div className="mt-4">
-          <Button type="button" variant="destructive" size="sm" onClick={onRetry}>
+        <div className="mt-3">
+          <Button type="button" variant="secondary" size="sm" onClick={onRetry}>
             Try Again
           </Button>
         </div>

@@ -4,19 +4,18 @@
 
 @layer base {
   html {
-    background-color: #FBF9F5;
-    color: #0F172A;
-    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #F6F5F0;
+    color: #242522;
+    font-family: Lato, system-ui, -apple-system, sans-serif;
     -webkit-tap-highlight-color: transparent;
   }
 
   body {
-    background-color: #FBF9F5;
-    color: #0F172A;
+    background-color: #F6F5F0;
+    color: #242522;
     min-height: 100vh;
   }
 
-  /* Interactive affordances per Anti-Slop C-2 and R-39 */
   a[href],
   button,
   summary,
@@ -35,13 +34,11 @@
     opacity: 0.6;
   }
 
-  /* High-contrast focus rings with 10.5:1 contrast against warm paper */
   :focus-visible {
-    outline: 2px solid #1B4332;
+    outline: 2px solid #765448;
     outline-offset: 2px;
   }
 
-  /* Accessible smooth scrolling unless user requests reduced motion */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

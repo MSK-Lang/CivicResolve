@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { CivicIssue } from '@civicresolve/shared';
-import { MapPin, Calendar, ArrowRight, Building2 } from 'lucide-react';
+import { MapPin, ArrowRight } from 'lucide-react';
 import { PriorityIndicator } from './ui/PriorityIndicator';
 import { StatusIndicator } from './ui/StatusIndicator';
 
@@ -10,73 +10,58 @@ interface IssueCardProps {
 
 export function IssueCard({ issue }: IssueCardProps) {
   const formattedDate = new Date(issue.createdAt).toLocaleDateString(undefined, {
-    year: 'numeric',
     month: 'short',
     day: 'numeric',
   });
 
   return (
-    <article className="bg-paper-card rounded-lg border border-border-subtle p-5 shadow-tactile hover:border-border-strong transition-colors flex flex-col justify-between motion-reduce:transition-none">
-      <div>
-        {/* Badges row with WCAG AA compliant indicators */}
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-paper-subtle text-ink-primary border border-border-subtle uppercase tracking-wider font-mono">
-            {issue.category.replace(/_/g, ' ')}
-          </span>
-          <div className="flex items-center gap-2">
+    <article className="group bg-surface rounded border border-border p-4 hover:border-ink-secondary/40 transition-colors">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div className="space-y-1.5 flex-1 min-w-0">
+          {/* Metadata chips */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[11px] font-mono uppercase tracking-wider text-ink-muted">
+              {issue.category.replace(/_/g, ' ')}
+            </span>
+            <span className="text-border text-xs">·</span>
             <PriorityIndicator priority={issue.urgency} />
             <StatusIndicator status={issue.status} />
           </div>
+
+          {/* Title */}
+          <h3 className="text-base font-semibold text-ink-primary leading-snug truncate">
+            <Link
+              to={`/issues/${issue.id}`}
+              className="hover:text-accent focus-visible:outline-2 focus-visible:outline-accent rounded"
+            >
+              {issue.title}
+            </Link>
+          </h3>
+
+          {/* Description */}
+          <p className="text-xs text-ink-secondary line-clamp-1 leading-relaxed">
+            {issue.description}
+          </p>
         </div>
 
-        {/* Title */}
-        <h3 className="text-lg font-bold text-ink-primary mb-2 leading-snug">
-          <Link
-            to={`/issues/${issue.id}`}
-            className="hover:text-civic-800 focus-visible:outline-2 focus-visible:outline-civic-800 rounded"
-          >
-            {issue.title}
-          </Link>
-        </h3>
-
-        {/* Description */}
-        <p className="text-sm text-ink-secondary line-clamp-2 mb-4 leading-relaxed">
-          {issue.description}
-        </p>
-
-        {/* AI Triage preview tag if available */}
-        {issue.aiTriage && (
-          <div className="bg-paper-subtle border border-border-subtle rounded-md p-2.5 mb-4 text-xs text-ink-secondary flex items-start gap-2">
-            <Building2 className="w-4 h-4 text-civic-800 shrink-0 mt-0.5" aria-hidden="true" />
-            <div>
-              <span className="font-semibold text-ink-primary">Assigned Department: </span>
-              <span>{issue.aiTriage.assignedDepartment}</span>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Meta and Action link */}
-      <div className="pt-3 border-t border-border-subtle flex items-center justify-between text-xs text-ink-secondary">
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            <MapPin className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />
-            <span className="truncate max-w-[140px] sm:max-w-[200px]">{issue.location.address}</span>
+        {/* Right side: Location, Date & Action */}
+        <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-border/60 text-xs text-ink-muted">
+          <span className="flex items-center gap-1 truncate max-w-[160px]">
+            <MapPin className="w-3 h-3 text-ink-muted" aria-hidden="true" />
+            <span className="truncate">{issue.location.address}</span>
           </span>
-          <span className="flex items-center gap-1">
-            <Calendar className="w-3.5 h-3.5 text-ink-muted" aria-hidden="true" />
+          <div className="flex items-center gap-3">
             <span>{formattedDate}</span>
-          </span>
+            <Link
+              to={`/issues/${issue.id}`}
+              className="inline-flex items-center gap-0.5 text-accent hover:text-accent-hover font-medium p-1 min-h-[44px] focus-visible:outline-2 focus-visible:outline-accent rounded"
+              aria-label={`View details for ${issue.title}`}
+            >
+              <span>View</span>
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </Link>
+          </div>
         </div>
-
-        <Link
-          to={`/issues/${issue.id}`}
-          className="inline-flex items-center gap-1 font-semibold text-civic-800 hover:text-civic-950 p-1 min-h-[44px] focus-visible:outline-2 focus-visible:outline-civic-800 rounded"
-          aria-label={`View full details for issue: ${issue.title}`}
-        >
-          <span>View details</span>
-          <ArrowRight className="w-4 h-4" aria-hidden="true" />
-        </Link>
       </div>
     </article>
   );

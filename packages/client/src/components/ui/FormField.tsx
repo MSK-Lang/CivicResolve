@@ -21,10 +21,8 @@ export function FormField({
 }: FormFieldProps) {
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
-
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined;
 
-  // Clone single child to inject id and aria attributes if it is a valid React element
   const renderedChild = React.isValidElement(children)
     ? React.cloneElement(children as React.ReactElement<{
         id?: string;
@@ -38,21 +36,21 @@ export function FormField({
     : children;
 
   return (
-    <div className={`space-y-1.5 ${className}`}>
+    <div className={`space-y-1 ${className}`}>
       <div className="flex items-center justify-between">
         <label
           htmlFor={id}
-          className="block text-sm font-semibold text-ink-primary tracking-tight"
+          className="block text-xs font-semibold text-ink-primary uppercase tracking-wider"
         >
           {label}
           {required && (
-            <span className="ml-1 text-terracotta-700" title="Required field" aria-hidden="true">
+            <span className="ml-1 text-accent" title="Required field" aria-hidden="true">
               *
             </span>
           )}
         </label>
         {required && (
-          <span className="text-xs text-ink-muted uppercase tracking-wider font-mono">
+          <span className="text-[10px] text-ink-muted uppercase font-mono tracking-wider">
             Required
           </span>
         )}
@@ -70,10 +68,9 @@ export function FormField({
         <p
           id={errorId}
           role="alert"
-          className="text-xs font-medium text-red-700 flex items-center gap-1.5 pt-0.5"
+          className="text-xs font-medium text-[#8A2222] pt-0.5"
         >
-          <span aria-hidden="true" className="font-bold">!</span>
-          <span>{error}</span>
+          {error}
         </p>
       )}
     </div>

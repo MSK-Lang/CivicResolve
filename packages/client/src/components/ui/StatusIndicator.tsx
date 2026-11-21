@@ -29,68 +29,22 @@ const statusConfig: Record<
   string,
   { label: string; bg: string; text: string; border: string; Icon: typeof Clock }
 > = {
-  submitted: {
-    label: 'Submitted',
-    bg: 'bg-slate-100',
-    text: 'text-slate-800',
-    border: 'border-slate-300',
-    Icon: Clock,
-  },
-  triaged: {
-    label: 'Triaged',
-    bg: 'bg-civic-50',
-    text: 'text-civic-900',
-    border: 'border-civic-300',
-    Icon: Cpu,
-  },
-  in_progress: {
-    label: 'In Progress',
-    bg: 'bg-blue-50',
-    text: 'text-blue-900',
-    border: 'border-blue-300',
-    Icon: Activity,
-  },
-  resolved: {
-    label: 'Resolved',
-    bg: 'bg-emerald-50',
-    text: 'text-emerald-900',
-    border: 'border-emerald-300',
-    Icon: CheckCircle2,
-  },
-  needs_review: {
-    label: 'Needs Review',
-    bg: 'bg-amber-50',
-    text: 'text-amber-900',
-    border: 'border-amber-300',
-    Icon: AlertTriangle,
-  },
-  closed: {
-    label: 'Closed',
-    bg: 'bg-slate-100',
-    text: 'text-slate-700',
-    border: 'border-slate-300',
-    Icon: CheckCheck,
-  },
-  rejected: {
-    label: 'Rejected',
-    bg: 'bg-slate-100',
-    text: 'text-slate-800',
-    border: 'border-slate-300',
-    Icon: XCircle,
-  },
+  submitted: { label: 'Submitted', bg: 'bg-surface-subtle', text: 'text-ink-secondary', border: 'border-border', Icon: Clock },
+  triaged: { label: 'Triaged', bg: 'bg-[#F2ECE9]', text: 'text-[#5E4238]', border: 'border-[#E0D3CC]', Icon: Cpu },
+  in_progress: { label: 'In Progress', bg: 'bg-[#EBF3FB]', text: 'text-[#1D4E7A]', border: 'border-[#CCE2F6]', Icon: Activity },
+  resolved: { label: 'Resolved', bg: 'bg-[#EDF6F0]', text: 'text-[#306B48]', border: 'border-[#C6E6D1]', Icon: CheckCircle2 },
+  needs_review: { label: 'Needs Review', bg: 'bg-[#FEF9E7]', text: 'text-[#7A5B0B]', border: 'border-[#F5E5A8]', Icon: AlertTriangle },
+  closed: { label: 'Closed', bg: 'bg-surface-subtle', text: 'text-ink-muted', border: 'border-border', Icon: CheckCheck },
+  rejected: { label: 'Rejected', bg: 'bg-surface-subtle', text: 'text-ink-muted', border: 'border-border', Icon: XCircle },
 };
 
-export function StatusIndicator({
-  status,
-  showIcon = true,
-  className = '',
-}: StatusIndicatorProps) {
+export function StatusIndicator({ status, showIcon = true, className = '' }: StatusIndicatorProps) {
   const normalized = status.toLowerCase().replace(/[\s-]/g, '_');
   const config = statusConfig[normalized] || {
     label: status.replace(/_/g, ' '),
-    bg: 'bg-slate-100',
-    text: 'text-slate-800',
-    border: 'border-slate-300',
+    bg: 'bg-surface-subtle',
+    text: 'text-ink-secondary',
+    border: 'border-border',
     Icon: HelpCircle,
   };
 
@@ -99,9 +53,9 @@ export function StatusIndicator({
   return (
     <span
       role="status"
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md border ${config.bg} ${config.text} ${config.border} select-none ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 text-xs font-medium rounded border ${config.bg} ${config.text} ${config.border} select-none ${className}`}
     >
-      {showIcon && <Icon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />}
+      {showIcon && <Icon className="w-3 h-3 shrink-0" aria-hidden="true" />}
       <span>{config.label}</span>
     </span>
   );
