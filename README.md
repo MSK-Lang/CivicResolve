@@ -27,153 +27,127 @@ On the administrative side, civic authorities get a centralized interface to rev
 CivicResolve leverages Google Cloud and Firebase infrastructure, including Google Gemini for AI-assisted analysis, Cloud Firestore for persistent data, Firebase Storage for evidence uploads and Google Cloud Run for application deployment.
 
 > PromptWars GDG PSG iTech x H2S Hackathon Platform
-> Production-minded, minimal full-stack foundation for citizen-first civic issue reporting and municipal AI triage.
+> Production-minded civic issue reporting, automated AI triage, and municipal dispatch platform.
 
 ---
 
-## 1. Architecture Overview
+## 1. Product and Architecture Overview
 
-CivicResolve is built as a minimal full-stack monorepo designed to deploy as a **single self-contained container on Google Cloud Run**:
+CivicResolve is a modern full-stack civic operations platform connecting citizens with municipal response departments. It packages both a high-performance React client and an enterprise Fastify backend into a **single self-contained container deployed on Google Cloud Run**:
 
-- **Frontend (`packages/client`)**: React 18, TypeScript, Vite, Tailwind CSS, Lucide icons, React Router, accessible WCAG AA design system.
-- **Backend (`packages/server`)**: Fastify, TypeScript, Zod environment validation, centralized error handling, health endpoints (`/healthz` and `/api/health`).
-- **Data & AI Layer**: Firebase Firestore, Firebase Authentication, and Google Gemini Generative AI for automated triage.
-- **Shared Contracts (`packages/shared`)**: Shared TypeScript schemas and Zod models ensuring end-to-end typed API contracts.
-- **Deployment**: Multi-stage Dockerfile that compiles the frontend and backend, serving static SPA assets directly from Fastify on `$PORT` (8080) in Google Cloud Run.
-
----
-
-## 2. Monorepo Structure
-
-```text
-CivicResolve/
-├── Dockerfile                  # Production multi-stage Docker build for Google Cloud Run
-├── .dockerignore
-├── .gitignore
-├── .env.example                # Sample environment configuration (never commit secrets)
-├── package.json                # Monorepo workspaces manifest
-├── tsconfig.base.json          # Root TypeScript configuration
-├── packages/
-│   ├── shared/                 # Shared schemas, DTOs and TypeScript models
-│   │   ├── src/index.ts
-│   │   └── package.json
-│   ├── server/                 # Fastify backend service
-│   │   ├── src/
-│   │   │   ├── app.ts          # Fastify instance, CORS, static SPA handler, error handler
-│   │   │   ├── index.ts        # Server entry point
-│   │   │   ├── config/env.ts   # Zod environment variable validation
-│   │   │   ├── routes/
-│   │   │   │   ├── health.ts   # /healthz and /api/health probes
-│   │   │   │   └── issues.ts   # Civic report CRUD and AI triage
-│   │   │   └── services/
-│   │   │       ├── firebase.ts # Firestore & Auth connectors with in-memory fallback
-│   │   │       └── gemini.ts   # Google Gemini prompt-driven municipal triage
-│   │   └── package.json
-│   └── client/                 # React + Vite frontend application
-│       ├── src/
-│       │   ├── App.tsx         # Routing and main app shell
-│       │   ├── components/     # Accessible Navbar, Footer, IssueCard, UIStates
-│       │   ├── pages/          # Dashboard, Report Issue, Detail, Health Status
-│       │   └── lib/            # Typed API client and Firebase initialization
-│       ├── tailwind.config.js  # Civic accessible color palette and focus styles
-│       ├── vite.config.ts      # Vite dev server with /api proxy to Fastify
-│       └── package.json
-```
+- **Frontend (`packages/client`)**: React 18, TypeScript, Vite, Tailwind CSS, Lucide icons, React Router, and an accessible WCAG AA design system following strict Anti-Slop editorial aesthetics.
+- **Backend (`packages/server`)**: Fastify, TypeScript, Zod validation, rate limiting, and structured diagnostic health probes (`/healthz` and `/api/health`).
+- **Data & AI Layer**: Google Cloud Firestore (Native mode), Google Cloud IAM least-privilege service accounts, and Google Gemini Generative AI for automated triage.
+- **GeoCluster Engine**: Deterministic Haversine distance spatial clustering (500m radius threshold) to detect and manage duplicate citizen complaints without data loss.
+- **Shared Contracts (`packages/shared`)**: Shared TypeScript schemas and Zod models ensuring strict end-to-end typed API contracts.
+- **Deployment**: Multi-stage Dockerfile compiling both frontend and backend, serving static SPA assets directly from Fastify on `$PORT` (8080) in Google Cloud Run.
 
 ---
 
-## 3. Required Credentials and Environment Variables
+## 2. Key Features (Genuinely Implemented)
 
-Copy `.env.example` to `.env`:
+### A. Citizen Issue Reporting Journey
+- **Intuitive Submission Flow**: File complaints across 8 municipal categories (Pothole, Sanitation, Street Lighting, Water Supply, Public Safety, Traffic Signals, Parks, Other).
+- **Location Context**: Coarsened address and neighborhood capture, with optional GPS coordinates and zone types (School/Hospital Zone, Transit Corridor, Commercial, Residential).
+- **Photo Evidence**: Client-side image validation (JPEG, PNG, WebP up to 5MB) with base64 stripping to prevent database bloat.
+- **Indian Civic Localization**: Specialized form examples, Indian phone formatting, and INR currency conventions.
 
-```bash
-cp .env.example .env
-```
+### B. Public Report Tracking and Verified Timeline
+- **Instant Tracking Lookup (`/track` & `/track/:id`)**: Citizens enter their report UUID to monitor municipal dispatch, triage results, and resolution progress.
+- **4-Stage Chronological Timeline**: Submitted, Triaged, In Progress, and Resolved milestones backed exclusively by verified backend audit timestamps without fabricated dates.
+- **Privacy Protection**: Citizen contact information (name, email, phone) is strictly omitted from public views, and coordinates are coarsened to ~100m.
+- **Official Audit Trail**: Expandable chronological log tracking timestamped system, AI, and administrative events.
 
-### Environment Keys:
+### C. Google Gemini Multimodal AI Triage
+- **Automated Categorization & Severity**: Evaluates title, description, context zone, and photo evidence.
+- **Human Review Safeguard**: Automatically flags reports for human review if model confidence falls below 75% or safety risk indicates imminent danger.
+- **Graceful Rules Fallback**: Deterministic rule-based fallback activates instantly if Gemini is unreachable, guaranteeing zero dropped citizen reports.
 
-| Variable | Description | Where to get it |
+### D. Deterministic Priority Scoring Engine
+- **Transparent Mathematical Scoring (0-100)**: Combines Severity (35 pts), Safety Risk (30 pts), Public Impact (20 pts), and Location Context (15 pts).
+- **Service Level Agreements**: Maps scores to P1 Critical (4h), P2 High (24h), P3 Medium (72h), or P4 Low (168h) target SLAs.
+
+### E. GeoCluster Duplicate Detection
+- **Haversine Distance Matching**: Evaluates great-circle distance between complaints of the same category using a 500m initial radius.
+- **Administrative Decision Workflow**: Municipal operators review detected duplicates via `GET /api/admin/clusters` and approve or reject links via `POST /api/admin/clusters/:id/decision`.
+- **Zero Data Loss Guarantee**: Reports are never automatically merged or deleted; original records and audit histories are preserved in Firestore.
+
+---
+
+## 3. Google Cloud Integrations
+
+| Google Cloud Service | Role & Implementation | Status |
 | :--- | :--- | :--- |
-| `GEMINI_API_KEY` | Google Gemini API Key | [Google AI Studio](https://aistudio.google.com/) |
-| `FIREBASE_PROJECT_ID` | Firebase / GCP Project ID | [Firebase Console](https://console.firebase.google.com/) |
-| `FIREBASE_CLIENT_EMAIL` | Firebase Admin Service Account Email | Firebase Console -> Project Settings -> Service Accounts |
-| `FIREBASE_PRIVATE_KEY` | Firebase Admin Private Key | Firebase Console -> Project Settings -> Service Accounts |
-| `VITE_FIREBASE_API_KEY` | Firebase Web Client API Key | Firebase Console -> Project Settings -> Web App |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase Web Auth Domain | Firebase Console -> Project Settings -> Web App |
-| `VITE_FIREBASE_APP_ID` | Firebase Web Application ID | Firebase Console -> Project Settings -> Web App |
-
-> **Graceful Fallback Mode**: If credentials are not yet configured during local testing, the backend automatically boots in **safe fallback mode** (in-memory store + rule-based triage) and reports current readiness on the `/health` page without crashing.
+| **Google Cloud Firestore** | Persistent Native-mode NoSQL database storing issues, clusters, and immutable audit logs. | Connected (`civicresolve-515407`) |
+| **Google Gemini Generative AI** | Prompt-driven automated complaint evaluation via `@google/genai` with fallback resilience. | Integrated (`gemini-3.5-flash`) |
+| **Google Cloud Run** | Serverless container runtime hosting Fastify and the React SPA on `$PORT` 8080. | Ready (`cloudbuild.yaml` + `Dockerfile`) |
+| **Google Cloud Build** | Automated continuous build and deployment pipeline to Artifact / Container Registry. | Configured (`cloudbuild.yaml`) |
+| **Google Cloud IAM** | Least-privilege runtime service account (`roles/datastore.user`). | Hardened |
 
 ---
 
-## 4. Local Development
+## 4. API Endpoints
 
-### Prerequisites:
-- Node.js >= 20.x (Recommended: Node 22)
+### Public Endpoints
+- `GET /healthz` - Startup readiness and service diagnostic status (database, AI, auth).
+- `GET /api/issues` - Paginated civic issue listing (PII redacted, coarsened coordinates).
+- `GET /api/issues/:id` - Single report retrieval with verified timeline and audit history.
+- `POST /api/issues` - Submit citizen complaint, trigger AI triage, and persist to Firestore.
+
+### Administrative Endpoints
+- `GET /api/admin/issues` - Full administrative listing with unredacted details and audit log.
+- `GET /api/admin/issues/:id` - Full administrative detail view.
+- `PATCH /api/admin/issues/:id` - Update status, urgency, or assign department with atomic audit event.
+- `GET /api/admin/clusters` - Query detected duplicate report clusters within 500m radius.
+- `POST /api/admin/clusters/:id/decision` - Approve or reject duplicate suggestion and persist to Firestore.
+
+---
+
+## 5. Local Setup and Development
+
+### Prerequisites
+- Node.js >= 20.x
 - npm >= 10.x
 
-### Install dependencies:
+### Quickstart
 ```bash
+# 1. Install dependencies across workspaces
 npm install
-```
 
-### Compile shared contracts:
-```bash
+# 2. Build shared TypeScript contracts
 npm run build:shared
-```
 
-### Run Backend and Frontend concurrently:
-Open two terminals:
+# 3. Configure environment
+cp .env.example .env
+# Edit .env with your FIREBASE_PROJECT_ID, GOOGLE_APPLICATION_CREDENTIALS, and GEMINI_API_KEY
 
-```bash
-# Terminal 1: Backend Server (runs on http://localhost:3001)
+# 4. Start Development Servers
+# Terminal 1: Backend Fastify server (http://localhost:3001)
 npm run dev:server
 
-# Terminal 2: Frontend Client with Vite (runs on http://localhost:5173)
+# Terminal 2: Frontend Vite client (http://localhost:5173)
 npm run dev:client
 ```
 
 ---
 
-## 5. Production Build Verification
-
-Verify that all packages compile and bundle cleanly:
-
-```bash
-npm run build
-```
-
-This compiles:
-1. `@civicresolve/shared` -> `packages/shared/dist/`
-2. `@civicresolve/client` -> `packages/client/dist/`
-3. `@civicresolve/server` -> `packages/server/dist/`
-
-### Test Single-Container Production Run Locally:
-```bash
-NODE_ENV=production PORT=8080 npm run start
-```
-Visit `http://localhost:8080/` in your browser. Fastify will serve the client SPA and the API routes from a single process.
-
----
-
 ## 6. Google Cloud Run Deployment
 
-Google Cloud Run automatically injects `$PORT` (default 8080) and uses Google Application Default Credentials (ADC).
+Deploy directly from Google Cloud Shell or any environment with `gcloud` authenticated:
 
-### Step 1: Set Google Cloud Project
 ```bash
-gcloud config set project YOUR_GCP_PROJECT_ID
-```
-
-### Step 2: Build and Deploy to Cloud Run
-```bash
+# Deploy to Google Cloud Run (asia-south1)
 gcloud run deploy civicresolve \
   --source . \
+  --project civicresolve-515407 \
+  --region asia-south1 \
   --platform managed \
-  --region us-central1 \
   --allow-unauthenticated \
-  --set-env-vars NODE_ENV=production \
-  --set-secrets GEMINI_API_KEY=GEMINI_API_KEY:latest
+  --set-env-vars "NODE_ENV=production,FIREBASE_PROJECT_ID=civicresolve-515407"
 ```
 
-Cloud Run will use the root `Dockerfile`, build both tiers, and launch the single container with SSL and automatic horizontal scaling.
+Or trigger an automated build using Cloud Build:
+
+```bash
+gcloud builds submit --config=cloudbuild.yaml --project=civicresolve-515407
+```
