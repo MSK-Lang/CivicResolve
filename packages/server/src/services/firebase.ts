@@ -65,6 +65,18 @@ function setupFirestore(): void {
 }
 
 export function initFirebase(): void {
+  // Prevent tests from ever polluting live Firestore
+  if (
+    process.env.NODE_ENV === 'test' ||
+    env.NODE_ENV === 'test' ||
+    process.argv.some(arg => arg.includes('test'))
+  ) {
+    console.log('Test environment active. Enforcing in-memory store.');
+    isFirebaseInitialized = false;
+    firestoreDb = null;
+    return;
+  }
+
   if (admin.apps.length > 0) {
     isFirebaseInitialized = true;
     setupFirestore();

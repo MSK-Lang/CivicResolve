@@ -3,9 +3,13 @@ import type { CivicIssue, CreateIssueInput, HealthCheckResponse } from '@civicre
 const API_BASE = '/api';
 
 export async function fetchHealth(): Promise<HealthCheckResponse> {
-  const res = await fetch('/healthz');
+  const res = await fetch('/api/health').catch(() => fetch('/healthz'));
   if (!res.ok) {
-    throw new Error(`Health check failed with status ${res.status}`);
+    const fallback = await fetch('/healthz');
+    if (!fallback.ok) {
+      throw new Error(`Health check failed with status ${fallback.status}`);
+    }
+    return fallback.json();
   }
   return res.json();
 }

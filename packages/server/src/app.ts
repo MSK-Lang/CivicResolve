@@ -6,8 +6,8 @@ import fs from 'fs';
 import { env } from './config/env.js';
 import { healthRoutes } from './routes/health.js';
 import { issueRoutes } from './routes/issues.js';
-import { initFirebase } from './services/firebase.js';
-import { initGemini } from './services/gemini.js';
+import { initFirebase, isFirebaseReady } from './services/firebase.js';
+import { initGemini, isGeminiReady } from './services/gemini.js';
 
 export function buildApp(options?: { logger?: boolean }): FastifyInstance {
   const isTest = process.env.NODE_ENV === 'test';
@@ -31,6 +31,27 @@ export function buildApp(options?: { logger?: boolean }): FastifyInstance {
     origin: env.NODE_ENV === 'production' ? true : [env.CORS_ORIGIN, 'http://localhost:5173', 'http://127.0.0.1:5173'],
     credentials: true
   });
+
+  // Top-level direct health routes to prevent static asset interception
+  const healthHandler = async () => {
+    const firestoreStatus = isFirebaseReady() ? 'connected' : (env.FIREBASE_PROJECT_ID ? 'error' : 'not_configured');
+    const geminiStatus = isGeminiReady() ? 'ready' : (env.GEMINI_API_KEY ? 'error' : 'not_configured');
+    return {
+      status: 'healthy',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      version: '0.1.0',
+      environment: env.NODE_ENV,
+      services: {
+        database: firestoreStatus,
+        gemini: geminiStatus,
+        auth: firestoreStatus === 'connected' ? 'ready' : 'not_configured'
+      }
+    };
+  };
+
+  app.get('/healthz', healthHandler);
+  app.get('/api/health', healthHandler);
 
   // Centralized Error Handling
   app.setErrorHandler((error: FastifyError | Error, request, reply) => {
