@@ -134,12 +134,12 @@ describe('CivicResolve Phase 2 Step 4.2: Final Security Hardening, Rate Limiting
   });
 
   // ==========================================================================
-  // 2. HTTP Request Body Payload Limits (HTTP 413)
+  // 2. HTTP Request Body Payload Limits (HTTP 413) & Image Size Limits
   // ==========================================================================
 
-  it('rejects oversized HTTP payloads exceeding bodyLimit before buffering', async () => {
-    // Generate an oversized string payload exceeding the 6MB limit
-    const hugeDescription = 'A'.repeat(7 * 1024 * 1024); // 7MB string
+  it('rejects oversized HTTP payloads exceeding 7.5MB bodyLimit before buffering', async () => {
+    // Generate an oversized string payload exceeding the 7.5MB limit (8MB)
+    const hugeDescription = 'A'.repeat(8 * 1024 * 1024);
 
     const response = await app.inject({
       method: 'POST',
@@ -154,6 +154,108 @@ describe('CivicResolve Phase 2 Step 4.2: Final Security Hardening, Rate Limiting
 
     // Fastify returns HTTP 413 Payload Too Large
     assert.equal(response.statusCode, 413);
+  });
+
+  it('accepts valid maximum-size image requests (~4.8MB binary / ~6.7MB base64) without rejection by global bodyLimit', async () => {
+    // 4.8MB binary image (< 5MB limit).
+    // In Base64 encoding (4/3 inflation), this produces ~6.4MB of base64 data.
+    // Total HTTP body is ~6.5MB. Previously failed under 6MB limit; now succeeds under 7.5MB limit.
+    const binaryBytes = Math.floor(4.8 * 1024 * 1024);
+    const validBase64 = 'data:image/jpeg;base64,' + Buffer.alloc(binaryBytes, 0x41).toString('base64');
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/issues',
+      payload: {
+        title: 'Max size valid image test',
+        description: 'Citizen report submitting a near-maximum 4.8MB image photo.',
+        category: 'pothole',
+        location: { address: '500 Highway 101' },
+        image: {
+          mimeType: 'image/jpeg',
+          dataBase64: validBase64,
+          fileSizeBytes: binaryBytes
+        }
+      }
+    });
+
+    // Should NOT be rejected with 413 Payload Too Large
+    assert.equal(response.statusCode, 201);
+    const json = response.json();
+    assert.equal(json.success, true);
+    assert.ok(json.data.id);
+  });
+
+  it('rejects image uploads where binary size exceeds the 5MB upload limit (HTTP 400)', async () => {
+    // Binary size 5.2MB exceeds the 5MB image upload limit
+    const binaryBytes = Math.floor(5.2 * 1024 * 1024);
+    const oversizedBase64 = 'data:image/jpeg;base64,' + Buffer.alloc(binaryBytes, 0x41).toString('base64');
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/issues',
+      payload: {
+        title: 'Oversized binary image test',
+        description: 'Report with an image that exceeds 5MB binary limit.',
+        category: 'pothole',
+        location: { address: '500 Highway 101' },
+        image: {
+          mimeType: 'image/jpeg',
+          dataBase64: oversizedBase64,
+          fileSizeBytes: binaryBytes
+        }
+      }
+    });
+
+    // Must be rejected with HTTP 400 validation error
+    assert.equal(response.statusCode, 400);
+    const json = response.json();
+    assert.equal(json.success, false);
+    assert.match(json.message, /exceeds the 5MB upload limit/i);
+  });
+
+  it('safely extracts client IP behind Cloud Run proxy without trusting spoofed X-Forwarded-For prefixes', async () => {
+    // Attacker sends spoofed IP '1.1.1.1' as leftmost entry in X-Forwarded-For.
+    // Cloud Run / Google Front End appends the verified client IP '198.51.100.42' at the end.
+    const spoofedHeader = '1.1.1.1, 198.51.100.42';
+
+    // Submit 10 reports with this header
+    for (let i = 0; i < 10; i++) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/issues',
+        headers: {
+          'x-forwarded-for': spoofedHeader
+        },
+        payload: {
+          title: 'Spoofed header rate limit test',
+          description: 'Testing proxy client IP resolution safety.',
+          category: 'pothole',
+          location: { address: '12 Safe St' },
+          reporterEmail: 'spoof.test@example.org'
+        }
+      });
+      assert.equal(res.statusCode, 201);
+    }
+
+    // 11th request with a CHANGED spoofed prefix ('2.2.2.2, 198.51.100.42')
+    // must still be rate-limited because the real proxy IP (198.51.100.42) is tracked!
+    const rateLimitedRes = await app.inject({
+      method: 'POST',
+      url: '/api/issues',
+      headers: {
+        'x-forwarded-for': '2.2.2.2, 198.51.100.42'
+      },
+      payload: {
+        title: 'Spoofed header rate limit test',
+        description: 'Testing proxy client IP resolution safety.',
+        category: 'pothole',
+        location: { address: '12 Safe St' },
+        reporterEmail: 'spoof.test@example.org'
+      }
+    });
+
+    assert.equal(rateLimitedRes.statusCode, 429);
   });
 
   // ==========================================================================

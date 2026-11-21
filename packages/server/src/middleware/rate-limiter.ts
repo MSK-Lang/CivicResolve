@@ -13,7 +13,20 @@ interface ClientBucket {
   resetAt: number;
 }
 
-// In-memory sliding rate limit store
+/**
+ * CIVICRESOLVE RATE LIMITING MIDDLEWARE
+ *
+ * SCOPE & PROCESS-LOCAL ENFORCEMENT LIMITATION:
+ * This rate limiter uses a process-local in-memory Map store. In multi-instance
+ * auto-scaling environments such as Google Cloud Run, rate-limit buckets are
+ * partitioned per container instance and are NOT globally synchronized across instances.
+ * This provides effective per-instance resource protection and DoS shielding against
+ * abusive bursts. Strict distributed rate limiting across all scaled Cloud Run instances
+ * requires an external distributed shared store such as Google Cloud Memorystore (Redis).
+ * We do not claim distributed enforcement.
+ */
+
+// In-memory sliding rate limit store (process-local)
 const rateLimitBuckets = new Map<string, ClientBucket>();
 
 /**
@@ -70,14 +83,32 @@ export function resetRateLimits(): void {
 }
 
 /**
- * Helper to safely extract client IP considering proxies and headers
+ * Safely extracts client IP address behind reverse proxies (e.g. Google Cloud Run).
+ *
+ * Security considerations:
+ * 1. Never blindly trust the first element of X-Forwarded-For because a client can forge
+ *    arbitrary spoofed IP addresses in that position (e.g. "X-Forwarded-For: 1.1.1.1").
+ * 2. Behind Google Cloud Run / Google Front End (GFE), the actual connecting IP is either
+ *    resolved via Fastify's vetted `trustProxy` implementation (`request.ip`), or appended
+ *    by the proxy as the rightmost/last entry.
  */
 export function getClientIp(request: FastifyRequest): string {
+  // If Fastify trustProxy is enabled, request.ip safely holds the verified remote address
+  if (request.ip && request.ip !== '127.0.0.1' && request.ip !== '::1') {
+    return request.ip;
+  }
+
+  // Safe parsing of X-Forwarded-For: take the rightmost (trusted reverse-proxy appended) address
   const forwarded = request.headers['x-forwarded-for'];
   if (typeof forwarded === 'string') {
-    return forwarded.split(',')[0].trim();
+    const ips = forwarded.split(',').map(s => s.trim()).filter(Boolean);
+    if (ips.length > 0) {
+      // The rightmost entry was appended by the closest reverse proxy (e.g. Google Cloud Run / GFE)
+      return ips[ips.length - 1];
+    }
   }
-  return request.ip || '127.0.0.1';
+
+  return request.ip || request.socket.remoteAddress || '127.0.0.1';
 }
 
 /**

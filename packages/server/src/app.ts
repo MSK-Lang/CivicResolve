@@ -12,7 +12,9 @@ import { initGemini } from './services/gemini.js';
 export function buildApp(options?: { logger?: boolean }): FastifyInstance {
   const isTest = process.env.NODE_ENV === 'test';
   const app = Fastify({
-    bodyLimit: 6 * 1024 * 1024, // 6MB maximum HTTP body payload limit
+    // Increased to 7.5MB (~7.86MB) to accommodate 5MB binary images after base64 expansion (x4/3 ≈ 6.99MB) plus JSON overhead
+    bodyLimit: Math.floor(7.5 * 1024 * 1024),
+    trustProxy: env.NODE_ENV === 'production' ? true : false,
     logger: options?.logger !== undefined
       ? options.logger
       : (isTest ? false : {
