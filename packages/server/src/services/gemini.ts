@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { env } from '../config/env.js';
 import {
   StrictGeminiTriageOutputSchema,
@@ -17,12 +17,20 @@ import {
 } from '@civicresolve/shared';
 
 // ============================================================================
-// Service Interfaces & Constants
+// Service Constants & Error Types
 // ============================================================================
 
+export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
 export const DEFAULT_GEMINI_TIMEOUT_MS = 5000;
-export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB limit
-export const GEMINI_MODEL_NAME = 'gemini-1.5-flash';
+export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB ceiling
+export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+
+export class InvalidInputError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvalidInputError';
+  }
+}
 
 export interface TriageComplaintInput {
   title: string;
@@ -39,27 +47,34 @@ export interface TriageComplaintInput {
 }
 
 export interface GeminiModelClient {
-  generateContent(params: any): Promise<{ response: { text(): string } }>;
+  models: {
+    generateContent(params: {
+      model: string;
+      contents: any;
+      config?: any;
+    }): Promise<{ text?: string; response?: { text(): string } }>;
+  };
 }
 
 export interface TriageOptions {
   client?: GeminiModelClient;
   timeoutMs?: number;
   apiKey?: string;
+  model?: string;
 }
 
 export type TriageResult = TriageEvaluation & GeminiTriageResult;
 
 // Global singleton client
-let genAI: GoogleGenerativeAI | null = null;
+let genAI: GoogleGenAI | null = null;
 
 export function initGemini(): void {
   if (env.GEMINI_API_KEY && !env.GEMINI_API_KEY.includes('placeholder')) {
     try {
-      genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
-      console.log('Google Gemini Generative AI client initialized.');
+      genAI = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
+      console.log(`Google GenAI client initialized with model ${DEFAULT_GEMINI_MODEL}.`);
     } catch (err) {
-      console.warn('Failed to initialize Google Gemini client:', err);
+      console.warn('Failed to initialize Google GenAI client:', (err as Error).message);
     }
   } else {
     console.log('GEMINI_API_KEY is not set. Deterministic rule-based triage fallback active.');
@@ -68,6 +83,10 @@ export function initGemini(): void {
 
 export function isGeminiReady(): boolean {
   return genAI !== null;
+}
+
+export function resetGeminiClient(): void {
+  genAI = null;
 }
 
 // ============================================================================
@@ -105,11 +124,10 @@ export function validateImageInput(image?: ImageMetadata): {
 } {
   if (!image) return { valid: true };
 
-  const validMimes = ['image/jpeg', 'image/png', 'image/webp'] as const;
-  if (!image.mimeType || !validMimes.includes(image.mimeType)) {
+  if (!image.mimeType || !ALLOWED_IMAGE_MIME_TYPES.includes(image.mimeType as any)) {
     return {
       valid: false,
-      error: `Unsupported image MIME type: ${image.mimeType || 'unknown'}. Allowed: JPEG, PNG, WebP.`
+      error: `Unsupported image MIME type: ${image.mimeType || 'unknown'}. Supported types: JPEG, PNG, WebP.`
     };
   }
 
@@ -117,15 +135,15 @@ export function validateImageInput(image?: ImageMetadata): {
     return { valid: true };
   }
 
-  // Strip possible data URI scheme prefix
+  // Strip potential data URI prefix without copying massive memory buffers
   const cleanBase64 = image.dataBase64.replace(/^data:image\/[a-z]+;base64,/, '');
 
-  // Calculate approximate byte size from base64
+  // Calculate approximate byte size from base64 string length
   const estimatedBytes = Math.floor((cleanBase64.length * 3) / 4);
   if (estimatedBytes > MAX_IMAGE_SIZE_BYTES) {
     return {
       valid: false,
-      error: `Image size (${Math.round(estimatedBytes / 1024)} KB) exceeds the 5MB limit.`
+      error: `Image size (${Math.round(estimatedBytes / 1024)} KB) exceeds the 5MB upload limit.`
     };
   }
 
@@ -133,7 +151,7 @@ export function validateImageInput(image?: ImageMetadata): {
     valid: true,
     inlineData: {
       data: cleanBase64,
-      mimeType: image.mimeType
+      mimeType: image.mimeType as 'image/jpeg' | 'image/png' | 'image/webp'
     }
   };
 }
@@ -187,7 +205,7 @@ export function buildRulesFallbackTriage(
 
   return {
     triageSource: 'rules_fallback',
-    aiConfidence: null, // Strictly null: never represent rules fallback as genuine AI confidence
+    aiConfidence: null, // Strictly null: never represent fallback estimation as AI confidence
     confidenceScore: 0.0,
     reviewRequired: true, // Always flagged for human review on fallback
     reviewReason: `Rules fallback activated: ${reason}`,
@@ -218,14 +236,16 @@ export async function triageComplaintWithGemini(
   options: TriageOptions = {}
 ): Promise<TriageResult> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_GEMINI_TIMEOUT_MS;
+  const targetModel = options.model || env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL;
 
-  // 1. Validate image payload security & boundaries
+  // 1. Validate image payload: separate invalid user input from provider failures
   const imageValidation = validateImageInput(input.image);
   if (!imageValidation.valid) {
-    return buildRulesFallbackTriage(input, imageValidation.error || 'Invalid image payload');
+    // Invalid uploads are rejected with a validation error rather than silently accepted
+    throw new InvalidInputError(imageValidation.error || 'Invalid image upload');
   }
 
-  // 2. Resolve client: custom mock client or initialized Google GenAI
+  // 2. Resolve client: custom mock client or initialized Google GenAI instance
   let modelClient: GeminiModelClient | null = options.client || null;
 
   if (!modelClient) {
@@ -235,18 +255,12 @@ export async function triageComplaintWithGemini(
     }
 
     try {
-      const activeGenAI = genAI || new GoogleGenerativeAI(key);
-      const model = activeGenAI.getGenerativeModel({
-        model: GEMINI_MODEL_NAME,
-        generationConfig: {
-          responseMimeType: 'application/json'
-        }
-      });
-      modelClient = model as unknown as GeminiModelClient;
+      const activeGenAI = genAI || new GoogleGenAI({ apiKey: key });
+      modelClient = activeGenAI as unknown as GeminiModelClient;
     } catch (clientErr) {
       return buildRulesFallbackTriage(
         input,
-        `Gemini client instantiation error: ${(clientErr as Error).message}`
+        `GenAI client initialization error: ${(clientErr as Error).message}`
       );
     }
   }
@@ -287,8 +301,8 @@ Output MUST be a single, valid JSON object matching this schema:
 - Address: ${input.location.address} (Neighborhood: ${input.location.neighborhood || 'Not specified'})
 - Has Image Evidence: ${imageValidation.inlineData ? 'Yes' : 'No'}`;
 
-  // Assemble content parts (multimodal if image present)
-  const contents: any[] = [systemInstruction, userPromptText];
+  // Assemble multimodal content parts
+  const contents: any[] = [userPromptText];
   if (imageValidation.inlineData) {
     contents.push({
       inlineData: {
@@ -298,22 +312,43 @@ Output MUST be a single, valid JSON object matching this schema:
     });
   }
 
-  // 4. Execute with bounded timeout
+  // 4. Execute request with cancellation/abort support and bounded timeout
+  const abortController = new AbortController();
+  let timer: NodeJS.Timeout | null = null;
   let rawResponseText = '';
+
   try {
-    const generatePromise = modelClient.generateContent(contents);
+    const generatePromise = modelClient.models.generateContent({
+      model: targetModel,
+      contents,
+      config: {
+        systemInstruction,
+        responseMimeType: 'application/json',
+        abortSignal: abortController.signal
+      }
+    });
 
     const timeoutPromise = new Promise<never>((_, reject) => {
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
+        abortController.abort();
         reject(new Error(`Gemini request timed out after ${timeoutMs}ms`));
       }, timeoutMs);
       timer.unref?.();
     });
 
     const result = await Promise.race([generatePromise, timeoutPromise]);
-    rawResponseText = result.response.text();
+
+    // Handle both new @google/genai text getter and legacy response text getters
+    rawResponseText =
+      typeof result?.text === 'string'
+        ? result.text
+        : typeof result?.response?.text === 'function'
+          ? result.response.text()
+          : '';
   } catch (apiError) {
     return buildRulesFallbackTriage(input, (apiError as Error).message || 'Gemini API call failed');
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 
   // 5. Parse and validate JSON structure
@@ -339,7 +374,7 @@ Output MUST be a single, valid JSON object matching this schema:
     ? deptValidation.data
     : getFallbackDepartmentForCategory(data.category);
 
-  // Always resolve the canonical name from registry (never trust model-invented names)
+  // Always resolve canonical name from registry (never trust arbitrary LLM-generated names)
   const canonicalDepartment = getDepartmentById(assignedDepartmentId);
 
   // 8. Human Review Flag logic
