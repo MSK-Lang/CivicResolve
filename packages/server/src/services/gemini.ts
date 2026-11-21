@@ -271,7 +271,11 @@ export async function triageComplaintWithGemini(
   }
 
   // Fast path: Check in-memory triage cache for identical reports (prevents duplicate Gemini API calls)
-  const cacheKey = `${input.category}::${input.title.trim().toLowerCase()}::${input.description.trim().toLowerCase()}`;
+  const imageTag = input.image
+    ? (input.image.url || (input.image.dataBase64 ? `${input.image.dataBase64.length}:${input.image.mimeType}` : 'has-image'))
+    : 'no-image';
+  const contextTag = input.location.contextZone || 'none';
+  const cacheKey = `${input.category}::${input.title.trim().toLowerCase()}::${input.description.trim().toLowerCase()}::${contextTag}::${imageTag}`;
   const now = Date.now();
   if (!options.client) {
     const cached = triageCache.get(cacheKey);

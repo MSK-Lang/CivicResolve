@@ -52,9 +52,9 @@ export async function detectGeoClusters(): Promise<DuplicateCandidate[]> {
     categoryBuckets.set(issue.category, list);
   }
 
-  // Spatial bounding-box thresholds for 500 meters (~0.0045 deg lat, ~0.007 deg lon)
-  const MAX_LAT_DIFF = 0.005;
-  const MAX_LON_DIFF = 0.008;
+  // Dynamic latitude-aware bounding-box thresholds for 500 meters
+  // 1 degree of latitude is ~111,000 meters globally (~0.0045 deg for 500m; 0.0055 includes 20% safety margin)
+  const MAX_LAT_DIFF = 0.0055;
 
   for (const categoryIssues of categoryBuckets.values()) {
     const count = categoryIssues.length;
@@ -63,13 +63,17 @@ export async function detectGeoClusters(): Promise<DuplicateCandidate[]> {
       const aLat = a.location.latitude!;
       const aLon = a.location.longitude!;
 
+      // 1 degree of longitude is 111,320m * cos(latitude). Adjust longitude bound dynamically for all latitudes.
+      const cosLat = Math.cos((aLat * Math.PI) / 180);
+      const maxLonDiff = (500 / (111320 * Math.max(0.1, Math.abs(cosLat)))) * 1.2;
+
       for (let j = i + 1; j < count; j++) {
         const b = categoryIssues[j];
         const bLat = b.location.latitude!;
         const bLon = b.location.longitude!;
 
-        // Fast bounding-box pre-filter: skip expensive Haversine trigonometric calls
-        if (Math.abs(aLat - bLat) > MAX_LAT_DIFF || Math.abs(aLon - bLon) > MAX_LON_DIFF) {
+        // Fast bounding-box pre-filter: mathematically guarantees no candidate within 500m is excluded
+        if (Math.abs(aLat - bLat) > MAX_LAT_DIFF || Math.abs(aLon - bLon) > maxLonDiff) {
           continue;
         }
 
