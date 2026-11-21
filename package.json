@@ -10,6 +10,7 @@
     "build:client": "npm run build --workspace=@civicresolve/client",
     "build:server": "npm run build --workspace=@civicresolve/server",
     "build": "npm run build:shared && npm run build:client && npm run build:server",
+    "test": "npm run test --workspace=@civicresolve/server",
     "dev:server": "npm run dev --workspace=@civicresolve/server",
     "dev:client": "npm run dev --workspace=@civicresolve/client",
     "start": "node packages/server/dist/index.js",
