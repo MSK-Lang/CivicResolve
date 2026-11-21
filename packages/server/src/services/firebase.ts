@@ -53,16 +53,21 @@ export function getFirebaseDiagnostics(): FirebaseDiagnostics {
   };
 }
 
+function setupFirestore(): void {
+  firestoreDb = admin.firestore();
+  firestoreDb.settings({ ignoreUndefinedProperties: true });
+  firebaseAuth = admin.auth();
+  try {
+    firebaseBucket = admin.storage().bucket();
+  } catch {
+    firebaseBucket = null;
+  }
+}
+
 export function initFirebase(): void {
   if (admin.apps.length > 0) {
     isFirebaseInitialized = true;
-    firestoreDb = admin.firestore();
-    firebaseAuth = admin.auth();
-    try {
-      firebaseBucket = admin.storage().bucket();
-    } catch {
-      firebaseBucket = null;
-    }
+    setupFirestore();
     return;
   }
 
@@ -79,13 +84,7 @@ export function initFirebase(): void {
         storageBucket: env.FIREBASE_PROJECT_ID ? `${env.FIREBASE_PROJECT_ID}.appspot.com` : undefined
       });
       isFirebaseInitialized = true;
-      firestoreDb = admin.firestore();
-      firebaseAuth = admin.auth();
-      try {
-        firebaseBucket = admin.storage().bucket();
-      } catch {
-        firebaseBucket = null;
-      }
+      setupFirestore();
       console.log('Firebase Admin initialized with explicit service account credentials.');
       return;
     } catch (err) {
@@ -111,13 +110,7 @@ export function initFirebase(): void {
           storageBucket: env.FIREBASE_PROJECT_ID ? `${env.FIREBASE_PROJECT_ID}.appspot.com` : undefined
         });
         isFirebaseInitialized = true;
-        firestoreDb = admin.firestore();
-        firebaseAuth = admin.auth();
-        try {
-          firebaseBucket = admin.storage().bucket();
-        } catch {
-          firebaseBucket = null;
-        }
+        setupFirestore();
         console.log(`Firebase Admin initialized with service account file: ${path.basename(resolvedPath)}`);
         return;
       } catch (err) {
@@ -135,13 +128,7 @@ export function initFirebase(): void {
         storageBucket: env.FIREBASE_PROJECT_ID ? `${env.FIREBASE_PROJECT_ID}.appspot.com` : undefined
       });
       isFirebaseInitialized = true;
-      firestoreDb = admin.firestore();
-      firebaseAuth = admin.auth();
-      try {
-        firebaseBucket = admin.storage().bucket();
-      } catch {
-        firebaseBucket = null;
-      }
+      setupFirestore();
       console.log('Firebase Admin initialized with Application Default Credentials.');
       return;
     } catch (err) {
