@@ -7,6 +7,10 @@ import {
   resetGeminiClient,
   type GeminiModelClient
 } from '../src/services/gemini.js';
+import {
+  setAuthVerifierForTesting,
+  resetAuthVerifier
+} from '../src/middleware/auth.js';
 import { env } from '../src/config/env.js';
 import type { FastifyInstance } from 'fastify';
 
@@ -39,12 +43,20 @@ describe('CivicResolve Phase 2 Step 4: Backend Report Pipeline Lifecycle', () =>
   beforeEach(() => {
     IssueRepository.clear();
     resetGeminiClient();
+    resetAuthVerifier();
+    setAuthVerifierForTesting(async (token) => {
+      if (token === 'admin-test-token') {
+        return { uid: 'admin-tester', email: 'admin@citygov.org', role: 'admin' };
+      }
+      return null;
+    });
     app = buildApp();
   });
 
   afterEach(async () => {
     IssueRepository.clear();
     resetGeminiClient();
+    resetAuthVerifier();
     await app.close();
   });
 
@@ -71,8 +83,8 @@ describe('CivicResolve Phase 2 Step 4: Backend Report Pipeline Lifecycle', () =>
       location: {
         address: '5th Ave & 42nd St',
         neighborhood: 'Midtown',
-        latitude: 40.753,
-        longitude: -73.982,
+        latitude: 40.753123,
+        longitude: -73.982456,
         contextZone: 'major_transit_corridor'
       },
       reporterName: 'Alex Citizen',
@@ -88,7 +100,8 @@ describe('CivicResolve Phase 2 Step 4: Backend Report Pipeline Lifecycle', () =>
     assert.equal(response.statusCode, 201);
     const json = response.json();
     assert.equal(json.success, true);
-    assert.ok(json.data.id.startsWith('rep-'));
+    // Collision-resistant UUID
+    assert.match(json.data.id, /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
     assert.equal(json.data.status, 'triaged');
     assert.equal(json.data.urgency, 'high');
     assert.equal(json.data.category, 'pothole');
@@ -100,16 +113,24 @@ describe('CivicResolve Phase 2 Step 4: Backend Report Pipeline Lifecycle', () =>
     assert.equal(json.data.priorityScore.priorityLevel, 'P2_HIGH');
     assert.equal(json.data.priorityScore.slaHours, 24);
 
-    // Privacy verification: reporter email is masked
-    assert.equal(json.data.reporterEmail, 'a***n@example.org');
+    // Public Privacy verification: citizen email is strictly omitted in public response
+    assert.equal(json.data.reporterEmail, undefined);
+    assert.equal(json.data.reporterPhone, undefined);
 
-    // Verify stored entity in repository
+    // Coarsened GPS in public response
+    assert.equal(json.data.location.latitude, 40.753);
+    assert.equal(json.data.location.longitude, -73.982);
+
+    // Verify stored entity in repository has unredacted data and audit trail
     const stored = await IssueRepository.getById(json.data.id);
     assert.ok(stored);
     assert.equal(stored.id, json.data.id);
     assert.equal(stored.status, 'triaged');
+    assert.equal(stored.reporterEmail, 'alex.citizen@example.org');
     assert.equal(stored.aiTriage?.triageSource, 'gemini');
     assert.equal(stored.aiTriage?.aiConfidence, 0.94);
+    assert.ok(Array.isArray(stored.auditHistory));
+    assert.ok(stored.auditHistory.length >= 3);
   });
 
   it('strips large base64 image data before repository persistence while preserving image metadata', async () => {
@@ -317,7 +338,7 @@ describe('CivicResolve Phase 2 Step 4: Backend Report Pipeline Lifecycle', () =>
     const json = response.json();
     assert.equal(json.success, true);
     assert.equal(json.data.id, 'rep-test-001');
-    assert.equal(json.data.reporterEmail, 'j***c@example.com');
+    assert.equal(json.data.reporterEmail, undefined);
   });
 
   it('GET /api/issues/:id returns 404 for unknown report ID', async () => {
@@ -418,6 +439,9 @@ describe('CivicResolve Phase 2 Step 4: Backend Report Pipeline Lifecycle', () =>
     const response = await app.inject({
       method: 'POST',
       url: '/api/triage/test',
+      headers: {
+        authorization: 'Bearer admin-test-token'
+      },
       payload
     });
 

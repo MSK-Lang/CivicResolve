@@ -10,6 +10,47 @@ let firebaseBucket: any = null;
 // In-memory fallback repository strictly for local development and testing
 const inMemoryIssues = new Map<string, CivicIssue>();
 
+export interface FirebaseDiagnostics {
+  isReady: boolean;
+  persistenceMode: 'firestore' | 'in_memory';
+  authReady: boolean;
+  storageReady: boolean;
+  projectId?: string;
+  missingConfig: string[];
+  recommendations: string[];
+}
+
+export function getFirebaseDiagnostics(): FirebaseDiagnostics {
+  const missing: string[] = [];
+  if (!env.FIREBASE_PROJECT_ID) missing.push('FIREBASE_PROJECT_ID');
+  if (!env.FIREBASE_CLIENT_EMAIL && !env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.K_SERVICE) {
+    missing.push('FIREBASE_CLIENT_EMAIL or GOOGLE_APPLICATION_CREDENTIALS');
+  }
+  if (!env.FIREBASE_PRIVATE_KEY && !env.GOOGLE_APPLICATION_CREDENTIALS && !process.env.K_SERVICE) {
+    missing.push('FIREBASE_PRIVATE_KEY or GOOGLE_APPLICATION_CREDENTIALS');
+  }
+
+  const recommendations: string[] = [];
+  if (missing.length > 0) {
+    recommendations.push(
+      'For Cloud Run deployment: Attach a service account with IAM roles "roles/datastore.user" and "roles/storage.objectAdmin", and set FIREBASE_PROJECT_ID.'
+    );
+    recommendations.push(
+      'For local testing with live Firebase: Set FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, and FIREBASE_PRIVATE_KEY in .env.'
+    );
+  }
+
+  return {
+    isReady: isFirebaseReady(),
+    persistenceMode: isFirebaseReady() ? 'firestore' : 'in_memory',
+    authReady: firebaseAuth !== null,
+    storageReady: firebaseBucket !== null,
+    projectId: env.FIREBASE_PROJECT_ID,
+    missingConfig: missing,
+    recommendations
+  };
+}
+
 export function initFirebase(): void {
   if (admin.apps.length > 0) {
     isFirebaseInitialized = true;
@@ -73,7 +114,17 @@ export function initFirebase(): void {
   }
 
   // Production check: Fail clearly in production if Firebase is misconfigured. Never silently deploy an in-memory app.
-  if (env.NODE_ENV === 'production') {
+  if (env.NODE_ENV === 'production' && (!isFirebaseInitialized || !firestoreDb)) {
+    const diagnostic = getFirebaseDiagnostics();
+    console.error('================================================================================');
+    console.error('CRITICAL CONFIGURATION ERROR: FIRESTORE CREDENTIALS MISSING IN PRODUCTION');
+    console.error('================================================================================');
+    console.error('CivicResolve requires Google Cloud Firestore in production mode.');
+    console.error('In-memory persistence is strictly forbidden in production.');
+    console.error(`Missing configuration: ${diagnostic.missingConfig.join(', ') || 'No valid credentials found'}`);
+    console.error('Cloud Run Deployment Guide:');
+    diagnostic.recommendations.forEach((rec, idx) => console.error(`  ${idx + 1}. ${rec}`));
+    console.error('================================================================================');
     throw new Error(
       'FATAL: Firebase credentials missing in production environment. In-memory store is forbidden in production.'
     );

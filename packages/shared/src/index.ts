@@ -288,12 +288,43 @@ export const CreateIssueInputSchema = z.object({
   imageUrl: z.string().url('Must be a valid image URL').optional().or(z.literal('')),
   image: ImageMetadataSchema.optional(),
   reporterName: z.string().min(2, 'Name must be at least 2 characters').optional(),
-  reporterEmail: z.string().email('Valid email is required').optional()
+  reporterEmail: z.string().email('Valid email is required').optional(),
+  reporterPhone: z.string().optional()
 });
 export type CreateIssueInput = z.infer<typeof CreateIssueInputSchema>;
 
 // ============================================================================
-// 7. Separate Entities: Citizen Report vs Clustered Incident
+// 7. Audit Event History Schema (Append-only)
+// ============================================================================
+
+export const ReportAuditEventTypeSchema = z.enum([
+  'report_submitted',
+  'triage_completed',
+  'triage_fallback',
+  'priority_calculated',
+  'review_flagged',
+  'status_updated',
+  'triage_overridden'
+]);
+export type ReportAuditEventType = z.infer<typeof ReportAuditEventTypeSchema>;
+
+export const ReportAuditEventSchema = z.object({
+  id: z.string(),
+  reportId: z.string(),
+  eventType: ReportAuditEventTypeSchema,
+  timestamp: z.string(),
+  actor: z.object({
+    type: z.enum(['citizen', 'system', 'ai_agent', 'admin']),
+    id: z.string().optional(),
+    name: z.string().optional()
+  }),
+  details: z.record(z.unknown()).optional(),
+  description: z.string()
+});
+export type ReportAuditEvent = z.infer<typeof ReportAuditEventSchema>;
+
+// ============================================================================
+// 8. Separate Entities: Citizen Report vs Clustered Incident
 // ============================================================================
 
 // Entity A: Individual Citizen Report (Raw citizen submission preserved)
@@ -309,11 +340,13 @@ export const CivicReportSchema = z.object({
     imageUrl: z.string().optional(),
     reporterName: z.string().optional(),
     reporterEmail: z.string().optional(),
+    reporterPhone: z.string().optional(),
     submittedAt: z.string()
   }),
   triage: TriageEvaluationSchema,
   priorityScore: PriorityScoreSchema,
   status: CivicIssueStatusSchema,
+  auditHistory: z.array(ReportAuditEventSchema).default([]),
   createdAt: z.string(),
   updatedAt: z.string()
 });
@@ -355,13 +388,58 @@ export const CivicIssueSchema = z.object({
   reporterId: z.string().optional(),
   reporterName: z.string().optional(),
   reporterEmail: z.string().optional(),
+  reporterPhone: z.string().optional(),
+  aiTriage: GeminiTriageResultSchema.optional(),
+  triageEvaluation: TriageEvaluationSchema.optional(),
+  priorityScore: PriorityScoreSchema.optional(),
+  auditHistory: z.array(ReportAuditEventSchema).optional().default([]),
+  createdAt: z.string(),
+  updatedAt: z.string()
+});
+export type CivicIssue = z.infer<typeof CivicIssueSchema>;
+
+// Public Sanitized Issue Schema (Strictly protects citizen privacy)
+export const PublicCivicIssueSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  category: CivicIssueCategorySchema,
+  status: CivicIssueStatusSchema,
+  urgency: CivicIssueUrgencySchema,
+  location: z.object({
+    address: z.string(),
+    neighborhood: z.string().optional(),
+    contextZone: LocationContextZoneSchema.optional(),
+    latitude: z.number().optional(),
+    longitude: z.number().optional()
+  }),
+  imageUrl: z.string().optional(),
+  image: z.object({
+    url: z.string().optional(),
+    mimeType: z.string().optional()
+  }).optional(),
   aiTriage: GeminiTriageResultSchema.optional(),
   triageEvaluation: TriageEvaluationSchema.optional(),
   priorityScore: PriorityScoreSchema.optional(),
   createdAt: z.string(),
   updatedAt: z.string()
 });
-export type CivicIssue = z.infer<typeof CivicIssueSchema>;
+export type PublicCivicIssue = z.infer<typeof PublicCivicIssueSchema>;
+
+// Administrative Issue Schema (Full details including personal info and audit history)
+export const AdminCivicIssueSchema = CivicIssueSchema.extend({
+  auditHistory: z.array(ReportAuditEventSchema)
+});
+export type AdminCivicIssue = z.infer<typeof AdminCivicIssueSchema>;
+
+// Administrative Update Request Schema
+export const AdminUpdateIssueSchema = z.object({
+  status: CivicIssueStatusSchema.optional(),
+  urgency: CivicIssueUrgencySchema.optional(),
+  assignedDepartmentId: DepartmentIdSchema.optional(),
+  notes: z.string().max(1000).optional()
+});
+export type AdminUpdateIssue = z.infer<typeof AdminUpdateIssueSchema>;
 
 // ============================================================================
 // 8. Health and Generic API Schemas
