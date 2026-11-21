@@ -54,6 +54,7 @@ export function HomePage() {
             type="button"
             variant="action"
             size="md"
+            className="!bg-[#765448] !text-white hover:!bg-[#5E4238] shadow-sm font-semibold"
             onClick={() => navigate('/report')}
           >
             <Plus className="w-4 h-4" aria-hidden="true" />

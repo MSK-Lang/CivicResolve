@@ -10,6 +10,7 @@ export function Navbar() {
     { name: 'Dashboard', path: '/' },
     { name: 'Report an Issue', path: '/report' },
     { name: 'Track Report', path: '/track' },
+    { name: 'Admin Portal', path: '/admin' },
     { name: 'System Health', path: '/health' },
   ];
 

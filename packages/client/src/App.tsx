@@ -6,6 +6,7 @@ import { HomePage } from './pages/HomePage';
 import { ReportIssuePage } from './pages/ReportIssuePage';
 import { TrackIssuePage } from './pages/TrackIssuePage';
 import { HealthCheckPage } from './pages/HealthCheckPage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 
 export default function App() {
   const location = useLocation();
@@ -70,6 +71,7 @@ export default function App() {
           <Route path="/track/:id" element={<TrackIssuePage />} />
           <Route path="/issues/:id" element={<TrackIssuePage />} />
           <Route path="/health" element={<HealthCheckPage />} />
+          <Route path="/admin" element={<AdminDashboardPage />} />
         </Routes>
       </div>
       <Footer />

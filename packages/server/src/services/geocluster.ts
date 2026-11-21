@@ -38,7 +38,7 @@ export async function detectGeoClusters(): Promise<DuplicateCandidate[]> {
   const candidates: DuplicateCandidate[] = [];
 
   // Fetch existing decisions from Firestore or memory
-  const existingDecisions = new Map<string, { status: 'approved' | 'rejected'; reviewedBy?: string; reviewedAt?: string; notes?: string }>();
+  const existingDecisions = new Map<string, { status: 'pending' | 'approved' | 'rejected'; reviewedBy?: string; reviewedAt?: string; notes?: string }>();
   if (isFirebaseReady() && getFirestore()) {
     try {
       const snap = await getFirestore()!.collection('clusters').get();

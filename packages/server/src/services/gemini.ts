@@ -20,8 +20,8 @@ import {
 // Service Constants & Error Types
 // ============================================================================
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-3.8-flash';
-export const DEFAULT_GEMINI_TIMEOUT_MS = 5000;
+export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash';
+export const DEFAULT_GEMINI_TIMEOUT_MS = 10000;
 export const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB ceiling
 export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
