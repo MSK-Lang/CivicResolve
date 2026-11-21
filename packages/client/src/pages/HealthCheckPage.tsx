@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { fetchHealth } from '../lib/api';
 import type { HealthCheckResponse } from '@civicresolve/shared';
-import { LoadingState, ErrorState } from '../components/UIStates';
+import { ErrorState } from '../components/UIStates';
+import { PageSkeleton } from '../components/ui/FeedbackStates';
 import { Button, PageContainer, Card } from '../components/ui';
 import { Activity, CheckCircle2, AlertTriangle, RefreshCw } from 'lucide-react';
 
@@ -46,7 +47,7 @@ export function HealthCheckPage() {
       </div>
 
       {loading ? (
-        <LoadingState label="Querying backend health endpoint (/healthz)..." />
+        <PageSkeleton />
       ) : error ? (
         <ErrorState message={error} onRetry={loadHealth} />
       ) : health ? (

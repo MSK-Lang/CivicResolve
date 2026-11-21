@@ -27,6 +27,27 @@ export function LoadingState({
   );
 }
 
+export function PageSkeleton({ className = '' }: { className?: string }) {
+  return (
+    <div
+      role="status"
+      aria-label="Loading page content"
+      className={`space-y-4 animate-pulse py-2 ${className}`}
+    >
+      <div className="space-y-2">
+        <div className="h-3 w-28 bg-surface-subtle rounded" />
+        <div className="h-7 w-3/4 max-w-md bg-surface-subtle rounded" />
+        <div className="h-3.5 w-1/2 max-w-sm bg-surface-subtle rounded" />
+      </div>
+      <div className="space-y-2.5 pt-4">
+        <div className="h-16 w-full bg-surface rounded border border-border/60" />
+        <div className="h-16 w-full bg-surface rounded border border-border/60" />
+        <div className="h-16 w-full bg-surface rounded border border-border/60" />
+      </div>
+    </div>
+  );
+}
+
 export interface EmptyStateProps {
   title: string;
   description: string;

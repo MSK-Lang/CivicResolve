@@ -3,7 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { fetchIssues, fetchHealth } from '../lib/api';
 import type { CivicIssue, HealthCheckResponse } from '@civicresolve/shared';
 import { IssueCard } from '../components/IssueCard';
-import { LoadingState, ErrorState, EmptyState } from '../components/UIStates';
+import { ErrorState, EmptyState } from '../components/UIStates';
+import { PageSkeleton } from '../components/ui/FeedbackStates';
 import { Button } from '../components/ui';
 import { Plus, ArrowRight } from 'lucide-react';
 
@@ -36,9 +37,9 @@ export function HomePage() {
   }, []);
 
   return (
-    <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-10">
-      {/* Compact Editorial Introduction */}
-      <section className="space-y-4 max-w-2xl">
+    <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-8">
+      {/* Compact Editorial Introduction - Separate Region */}
+      <section className="space-y-3.5 max-w-2xl">
         <span className="text-xs font-mono tracking-widest uppercase text-ink-muted">
           Municipal Civic Register
         </span>
@@ -65,7 +66,7 @@ export function HomePage() {
       <section aria-labelledby="reports-heading" className="space-y-4">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <h2 id="reports-heading" className="text-sm font-semibold uppercase tracking-wider text-ink-primary">
-            Recent Reports ({issues.length})
+            Recent Reports {!loading && `(${issues.length})`}
           </h2>
           <Link
             to="/report"
@@ -76,7 +77,7 @@ export function HomePage() {
         </div>
 
         {loading ? (
-          <LoadingState label="Loading civic records..." />
+          <PageSkeleton />
         ) : error ? (
           <ErrorState message={error} onRetry={loadData} />
         ) : issues.length === 0 ? (

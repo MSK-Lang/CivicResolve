@@ -6,9 +6,9 @@ import {
   Button,
   PriorityIndicator,
   StatusIndicator,
-  LoadingState,
   ErrorState,
 } from '../components/ui';
+import { PageSkeleton } from '../components/ui/FeedbackStates';
 import {
   ArrowLeft,
   MapPin,
@@ -46,8 +46,8 @@ export function IssueDetailPage() {
 
   if (loading) {
     return (
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
-        <LoadingState label="Retrieving issue record..." />
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <PageSkeleton />
       </main>
     );
   }
