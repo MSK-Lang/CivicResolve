@@ -274,7 +274,7 @@ export function ReportIssuePage() {
     const slaHours = createdReport.priorityScore?.slaHours;
 
     return (
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-10 sm:py-16 animate-fade-in">
         <div className="bg-surface rounded border border-border p-6 sm:p-8 space-y-6">
           <div className="space-y-2">
             <span className="text-xs font-mono uppercase tracking-widest text-ink-muted">
@@ -672,9 +672,9 @@ export function ReportIssuePage() {
             variant="action"
             size="lg"
             isLoading={isSubmitting}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto min-w-[170px]"
           >
-            Submit Report
+            {isSubmitting ? 'Submitting report...' : 'Submit Report'}
           </Button>
         </div>
       </form>
